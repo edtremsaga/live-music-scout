@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { extractTime, getTextLines, isTonight, normalizeWhitespace, parseMonthDayText } from "../dateUtils.js";
+import { extractTime, getTextLines, normalizeWhitespace, parseMonthDayText } from "../dateUtils.js";
 import type { LiveMusicEvent, ParserContext, ParserResult } from "../types.js";
 
 const KNOWN_VENUES = [
@@ -64,10 +64,6 @@ export function parseStg(html: string, context: ParserContext): ParserResult {
     }
 
     candidateCount += 1;
-    if (!isTonight(parsedDate, context.now, context.timezone)) {
-      continue;
-    }
-
     if (seenTitles.has(`${title}|${venue}|${parsedDate}`)) {
       continue;
     }

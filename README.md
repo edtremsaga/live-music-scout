@@ -27,10 +27,22 @@ Preview mode:
 npm run scout
 ```
 
+Weekly preview mode:
+
+```bash
+npm run scout:week
+```
+
 Manual email mode:
 
 ```bash
 npm run scout:email
+```
+
+Weekly email mode:
+
+```bash
+npm run scout:week:email
 ```
 
 ## What the script does
@@ -48,6 +60,10 @@ npm run scout:email
 9. Persist newly seen event IDs so future runs can avoid obvious duplicates
 
 `npm run scout:email` runs the same pipeline, prints the same preview and parser summary, and then sends the preview as a plain-text email through SMTP.
+
+`npm run scout:week` evaluates shows from today through the next 7 days, prints a weekly preview, and does not send email.
+
+`npm run scout:week:email` generates the same weekly report and sends it through the existing Gmail SMTP setup.
 
 ## Current parser coverage
 

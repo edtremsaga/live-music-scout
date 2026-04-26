@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { extractTime, isTonight, normalizeWhitespace, parseMonthDayText } from "../dateUtils.js";
+import { extractTime, normalizeWhitespace, parseMonthDayText } from "../dateUtils.js";
 import type { LiveMusicEvent, ParserContext, ParserResult } from "../types.js";
 
 function makeId(input: string): string {
@@ -58,10 +58,6 @@ export function parseTractor(html: string, context: ParserContext): ParserResult
     }
 
     candidateCount += 1;
-    if (!isTonight(parsedDate, context.now, context.timezone)) {
-      continue;
-    }
-
     const url = titleToUrl.get(title) ?? context.source.url;
     const time = extractTime(dateLine);
     const basis = [

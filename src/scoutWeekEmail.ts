@@ -2,7 +2,7 @@ import { printScoutResult, runScout } from "./runScout.js";
 import { sendEmail } from "./sendEmail.js";
 
 async function main(): Promise<void> {
-  const result = await runScout();
+  const result = await runScout({ reportKind: "week" });
   printScoutResult(result);
   console.log("");
 
@@ -21,7 +21,7 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  console.error("Live Music Scout email run failed.");
+  console.error("Live Music Scout weekly email run failed.");
   console.error(error instanceof Error ? error.stack ?? error.message : String(error));
   process.exitCode = 1;
 });

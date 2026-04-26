@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { extractTime, isTonight, normalizeWhitespace, parseMonthDayText, stripHtml } from "../dateUtils.js";
+import { extractTime, normalizeWhitespace, parseMonthDayText, stripHtml } from "../dateUtils.js";
 import type { LiveMusicEvent, ParserContext, ParserResult } from "../types.js";
 
 const WEEKDAY_PATTERN = "(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)";
@@ -55,10 +55,6 @@ export function parseRoyalRoom(html: string, context: ParserContext): ParserResu
     }
 
     candidateCount += 1;
-    if (!isTonight(parsedDate, context.now, context.timezone)) {
-      continue;
-    }
-
     const basisParts = [
       "Parsed from The Royal Room events listing",
       "venue fit suggests jazz, soul, funk, strong local musicianship, and a more comfortable seated setup",

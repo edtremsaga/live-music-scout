@@ -1,27 +1,39 @@
 import { classifyEvents } from "./classifyEvents.js";
 import { loadPreferences, loadSources } from "./config.js";
-import { getPacificTimezone, getTonightKey } from "./dateUtils.js";
-import { SCOUT_EMAIL_SUBJECT } from "./emailConfig.js";
+import { getDateKeyWithOffset, getPacificTimezone, isDateInRange } from "./dateUtils.js";
+import { SCOUT_EMAIL_SUBJECT, SCOUT_WEEK_EMAIL_SUBJECT } from "./emailConfig.js";
 import { fetchPage } from "./fetchPage.js";
-import { generateEmailPreview } from "./generateEmail.js";
+import { generateEmailHtml, generateEmailPreview, generateWeeklyEmailHtml, generateWeeklyEmailPreview } from "./generateEmail.js";
 import { parsers } from "./parsers/index.js";
 import { rankEvents } from "./rankEvents.js";
 import { readSeenEventsStore, writeSeenEventsStore } from "./storage.js";
-import type { LiveMusicEvent, RankedEvent, SourceRunStatus } from "./types.js";
+import type { LiveMusicEvent, RankedEvent, ReportKind, SourceRunStatus } from "./types.js";
 
 export type ScoutRunResult = {
   generatedAt: Date;
+  reportKind: ReportKind;
   subject: string;
   preview: string;
+  html: string;
   rankedEvents: RankedEvent[];
   statuses: SourceRunStatus[];
   finalEmailItemCount: number;
+  startKey: string;
+  endKey: string;
 };
 
-export async function runScout(): Promise<ScoutRunResult> {
+type RunScoutOptions = {
+  reportKind?: ReportKind;
+};
+
+export async function runScout(options: RunScoutOptions = {}): Promise<ScoutRunResult> {
   const now = new Date();
   const timezone = getPacificTimezone();
-  const tonightKey = getTonightKey(now, timezone);
+  const reportKind = options.reportKind ?? "tonight";
+  const startKey = getDateKeyWithOffset(now, 0, timezone);
+  const endKey = getDateKeyWithOffset(now, reportKind === "week" ? 7 : 0, timezone);
+  const matchedLabel = reportKind === "week" ? "in range" : "tonight";
+  const subject = reportKind === "week" ? SCOUT_WEEK_EMAIL_SUBJECT : SCOUT_EMAIL_SUBJECT;
 
   const [sources, preferences, seenStore] = await Promise.all([
     loadSources(),
@@ -43,7 +55,8 @@ export async function runScout(): Promise<ScoutRunResult> {
         fetchStatus: "failed",
         message: `No parser registered for "${source.parser}"`,
         candidateCount: 0,
-        tonightCount: 0
+        matchedCount: 0,
+        matchedLabel
       });
       continue;
     }
@@ -51,17 +64,17 @@ export async function runScout(): Promise<ScoutRunResult> {
     try {
       const html = await fetchPage(source.url);
       const result = await parser(html, { source, now, timezone });
-      const tonightEvents = result.events.filter((event) => event.date === tonightKey);
-      const classifiedTonightEvents = classifyEvents(tonightEvents);
-      const likelyMusicCount = classifiedTonightEvents.filter((event) => event.classification.isLikelyMusic).length;
-      const excludedCount = classifiedTonightEvents.filter(
+      const matchedEvents = result.events.filter((event) => isDateInRange(event.date, startKey, endKey));
+      const classifiedMatchedEvents = classifyEvents(matchedEvents);
+      const likelyMusicCount = classifiedMatchedEvents.filter((event) => event.classification.isLikelyMusic).length;
+      const excludedCount = classifiedMatchedEvents.filter(
         (event) => !event.classification.isLikelyMusic && event.classification.eventType !== "unknown"
       ).length;
-      const ambiguousCount = classifiedTonightEvents.filter(
+      const ambiguousCount = classifiedMatchedEvents.filter(
         (event) => !event.classification.isLikelyMusic && event.classification.eventType === "unknown"
       ).length;
 
-      allTonightEvents.push(...tonightEvents);
+      allTonightEvents.push(...matchedEvents);
       statuses.push({
         sourceName: source.name,
         parserName: source.parser,
@@ -69,7 +82,8 @@ export async function runScout(): Promise<ScoutRunResult> {
         fetchStatus: "fetched",
         message: result.statusMessage,
         candidateCount: result.candidateCount ?? result.events.length,
-        tonightCount: tonightEvents.length,
+        matchedCount: matchedEvents.length,
+        matchedLabel,
         parserConfidence: result.parserConfidence,
         uncertainCount: result.uncertainCount ?? 0,
         likelyMusicCount,
@@ -85,7 +99,8 @@ export async function runScout(): Promise<ScoutRunResult> {
         fetchStatus: "failed",
         message: `fetch or parse failed: ${message}`,
         candidateCount: 0,
-        tonightCount: 0
+        matchedCount: 0,
+        matchedLabel
       });
     }
   }
@@ -93,7 +108,14 @@ export async function runScout(): Promise<ScoutRunResult> {
   const seenEventIds = new Set(seenStore.seenEventIds);
   const classifiedTonightEvents = classifyEvents(allTonightEvents);
   const rankedEvents = rankEvents(classifiedTonightEvents, preferences, seenEventIds);
-  const preview = generateEmailPreview(now, rankedEvents);
+  const preview =
+    reportKind === "week"
+      ? generateWeeklyEmailPreview(now, rankedEvents, startKey, endKey)
+      : generateEmailPreview(now, rankedEvents);
+  const html =
+    reportKind === "week"
+      ? generateWeeklyEmailHtml(now, rankedEvents, startKey, endKey)
+      : generateEmailHtml(now, rankedEvents);
   const finalEmailItemCount = rankedEvents.length;
 
   await writeSeenEventsStore({
@@ -105,11 +127,15 @@ export async function runScout(): Promise<ScoutRunResult> {
 
   return {
     generatedAt: now,
-    subject: SCOUT_EMAIL_SUBJECT,
+    reportKind,
+    subject,
     preview,
+    html,
     rankedEvents,
     statuses,
-    finalEmailItemCount
+    finalEmailItemCount,
+    startKey,
+    endKey
   };
 }
 
@@ -132,7 +158,7 @@ export function printScoutResult(result: ScoutRunResult): void {
         : "";
 
     console.log(
-      `- ${status.sourceName}: ${status.fetchStatus}; ${status.candidateCount} parsed, ${status.tonightCount} tonight${classificationText}${confidenceText}${uncertaintyText}. ${status.message}`
+      `- ${status.sourceName}: ${status.fetchStatus}; ${status.candidateCount} parsed, ${status.matchedCount} ${status.matchedLabel}${classificationText}${confidenceText}${uncertaintyText}. ${status.message}`
     );
   }
 }

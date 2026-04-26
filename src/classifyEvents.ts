@@ -164,6 +164,11 @@ export function classifyEvent(event: LiveMusicEvent): ClassifiedEvent {
     reasons.push("The Royal Room is strongly music-oriented");
   }
 
+  if (event.venue === "Dimitriou's Jazz Alley" || event.sourceName === "Dimitriou's Jazz Alley") {
+    musicScore += 4;
+    reasons.push("Jazz Alley is a strong live-music source");
+  }
+
   if (event.sourceName === "STG Presents") {
     musicScore += 1;
     reasons.push("STG can include music, but it needs stronger title signals");

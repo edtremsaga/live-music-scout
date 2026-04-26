@@ -1,5 +1,15 @@
-import { cleanDisplayText, formatTonightLong, getTimeOfDayNote } from "./dateUtils.js";
+import { cleanDisplayText, formatDateKeyShort, formatDateKeyWeekday, formatDateRangeLong, formatTonightLong, getTimeOfDayNote } from "./dateUtils.js";
 import type { RankedEvent } from "./types.js";
+
+type WeeklyHighlightGroup = {
+  key: string;
+  representative: RankedEvent;
+  events: RankedEvent[];
+};
+
+const MAX_WEEKLY_HIGHLIGHTS = 8;
+const MAX_WEEKLY_HIGHLIGHTS_PER_VENUE = 2;
+const MAX_WEEKLY_HIGHLIGHTS_PER_SOURCE = 2;
 
 function escapeHtml(value: string): string {
   return value
@@ -27,6 +37,10 @@ export function getSourceLinkLabel(event: Pick<RankedEvent, "url" | "sourceName"
 
   if (event.venue === "The Royal Room" || event.sourceName === "The Royal Room" || url.includes("theroyalroomseattle.com")) {
     return "Royal Room event page";
+  }
+
+  if (event.venue === "Dimitriou's Jazz Alley" || event.sourceName === "Dimitriou's Jazz Alley" || url.includes("jazzalley.com")) {
+    return "Jazz Alley event page";
   }
 
   if (event.sourceName === "STG Presents" || url.includes("stgpresents.org")) {
@@ -69,6 +83,10 @@ function buildWhyLine(event: RankedEvent): string {
     return titleLower.includes("trio") || titleLower.includes("jammah") || titleLower.includes("jam")
       ? "A likely groove/jam-oriented Royal Room show in a comfortable room with strong local-musician energy."
       : "A Royal Room date that looks promising if you want a comfortable room and musicianship-first energy.";
+  }
+
+  if (event.venue === "Dimitriou's Jazz Alley") {
+    return "A seated Jazz Alley date with a strong musicianship-first feel — a good option if you want a more focused listening-room night.";
   }
 
   if (event.sourceName === "STG Presents") {
@@ -219,6 +237,244 @@ function renderEvaluatedItemHtml(event: RankedEvent): string {
   return `<li>${escapeHtml(title)} — ${escapeHtml(venue)}${escapeHtml(timePart)} — ${escapeHtml(publicText(reason))} ${formatSourceLinkHtml(event)}</li>`;
 }
 
+function normalizeWeeklyHighlightTitle(value: string): string {
+  return publicText(value)
+    .toLowerCase()
+    .replace(/\bsold out!?\b/g, " ")
+    .replace(/^[^:]{1,80}\bpresents:\s*/i, "")
+    .replace(/\b(both shows|night one|night two|night 1|night 2)\b/g, " ")
+    .replace(/[“”"'’‘()[\]{}*.,!?:;/\\\-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getWeeklyHighlightKey(event: RankedEvent): string {
+  const title = normalizeWeeklyHighlightTitle(event.artist ?? event.title);
+  const venue = publicText(event.venue).toLowerCase();
+  return `${venue}::${title}`;
+}
+
+function formatWeeklyDateList(dateKeys: string[]): string {
+  return dateKeys.map((dateKey) => formatDateKeyShort(dateKey)).join(", ");
+}
+
+function formatWeeklyTimes(events: RankedEvent[]): string | undefined {
+  const times = Array.from(
+    new Set(
+      events
+        .flatMap((event) => (event.time ?? "").split("/"))
+        .map((time) => publicText(time))
+        .filter(Boolean)
+    )
+  );
+
+  return times.length > 0 ? times.join(" / ") : undefined;
+}
+
+function cleanGroupedHighlightDisplayTitle(value: string): string {
+  return publicText(value)
+    .replace(/\s+\b(BOTH SHOWS|NIGHT ONE|NIGHT TWO|Night 1|Night 2)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function buildWeeklyGroupTake(group: WeeklyHighlightGroup): string {
+  const allSoldOut = group.events.every((event) => getAvailabilityLine(event) === "Sold out");
+
+  if (allSoldOut) {
+    return "Worth tracking, but it’s sold out — check resale or future dates.";
+  }
+
+  if (group.events.length > 1) {
+    return "Good weekly planning option — pick the date that works best.";
+  }
+
+  return getMyTake(group.representative);
+}
+
+function renderWeeklyHighlight(group: WeeklyHighlightGroup): string {
+  if (group.events.length === 1) {
+    return renderHighlight(group.representative);
+  }
+
+  const representative = group.representative;
+  const title = cleanGroupedHighlightDisplayTitle(representative.artist ?? representative.title);
+  const venue = publicText(representative.venue);
+  const location = publicText(representative.location ?? "Seattle area");
+  const dates = Array.from(new Set(group.events.map((event) => event.date))).sort();
+  const times = formatWeeklyTimes(group.events);
+  const availability = group.events.every((event) => getAvailabilityLine(event) === "Sold out") ? "Sold out" : undefined;
+
+  return [
+    `### ${title}`,
+    `- Venue: ${venue}`,
+    `- Dates: ${formatWeeklyDateList(dates)}`,
+    times ? `- Times: ${times}` : undefined,
+    `- Location: ${location}`,
+    availability ? `- Availability: ${availability}` : undefined,
+    `- Why it looks good: ${publicText(buildWhyLine(representative))}`,
+    `- My take: ${publicText(buildWeeklyGroupTake(group))}`,
+    `- Source: ${formatSourceLinkMarkdown(representative)}`
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+function renderWeeklyHighlightHtml(group: WeeklyHighlightGroup): string {
+  if (group.events.length === 1) {
+    return renderHighlightHtml(group.representative);
+  }
+
+  const representative = group.representative;
+  const title = cleanGroupedHighlightDisplayTitle(representative.artist ?? representative.title);
+  const venue = publicText(representative.venue);
+  const location = publicText(representative.location ?? "Seattle area");
+  const dates = Array.from(new Set(group.events.map((event) => event.date))).sort();
+  const times = formatWeeklyTimes(group.events);
+  const availability = group.events.every((event) => getAvailabilityLine(event) === "Sold out") ? "Sold out" : undefined;
+
+  return [
+    `<h3>${escapeHtml(title)}</h3>`,
+    "<ul>",
+    `<li><strong>Venue:</strong> ${escapeHtml(venue)}</li>`,
+    `<li><strong>Dates:</strong> ${escapeHtml(formatWeeklyDateList(dates))}</li>`,
+    times ? `<li><strong>Times:</strong> ${escapeHtml(times)}</li>` : undefined,
+    `<li><strong>Location:</strong> ${escapeHtml(location)}</li>`,
+    availability ? `<li><strong>Availability:</strong> ${escapeHtml(availability)}</li>` : undefined,
+    `<li><strong>Why it looks good:</strong> ${escapeHtml(publicText(buildWhyLine(representative)))}</li>`,
+    `<li><strong>My take:</strong> ${escapeHtml(publicText(buildWeeklyGroupTake(group)))}</li>`,
+    `<li><strong>Source:</strong> ${formatSourceLinkHtml(representative)}</li>`,
+    "</ul>"
+  ]
+    .filter(Boolean)
+    .join("");
+}
+
+function selectWeeklyEmailSections(rankedEvents: RankedEvent[]): {
+  highlights: WeeklyHighlightGroup[];
+  evaluatedByDay: Map<string, RankedEvent[]>;
+  highlightIds: Set<string>;
+} {
+  const highlightCandidates = rankedEvents
+    .filter(
+      (event) =>
+        (event.verdict === "Go" || event.verdict === "Maybe")
+        && event.classification.isLikelyMusic
+    );
+  const groupedHighlights = new Map<string, WeeklyHighlightGroup>();
+
+  for (const event of highlightCandidates) {
+    const key = getWeeklyHighlightKey(event);
+    const existing = groupedHighlights.get(key);
+
+    if (existing) {
+      existing.events.push(event);
+      if (event.score > existing.representative.score) {
+        existing.representative = event;
+      }
+      continue;
+    }
+
+    groupedHighlights.set(key, {
+      key,
+      representative: event,
+      events: [event]
+    });
+  }
+
+  const sortedGroups = Array.from(groupedHighlights.values())
+    .sort((a, b) => b.representative.score - a.representative.score || a.representative.title.localeCompare(b.representative.title));
+  const shouldApplyVenueCap = new Set(sortedGroups.map((group) => publicText(group.representative.venue))).size > 1;
+  const shouldApplySourceCap = new Set(sortedGroups.map((group) => publicText(group.representative.sourceName))).size > 1;
+  const venueCounts = new Map<string, number>();
+  const sourceCounts = new Map<string, number>();
+  const highlights: WeeklyHighlightGroup[] = [];
+  const deferredGroups: WeeklyHighlightGroup[] = [];
+
+  for (const group of sortedGroups) {
+    const venueKey = publicText(group.representative.venue);
+    const sourceKey = publicText(group.representative.sourceName);
+    const venueCount = venueCounts.get(venueKey) ?? 0;
+    const sourceCount = sourceCounts.get(sourceKey) ?? 0;
+    const venueBlocked = shouldApplyVenueCap && venueCount >= MAX_WEEKLY_HIGHLIGHTS_PER_VENUE;
+    const sourceBlocked = shouldApplySourceCap && sourceCount >= MAX_WEEKLY_HIGHLIGHTS_PER_SOURCE;
+
+    if (venueBlocked || sourceBlocked) {
+      deferredGroups.push(group);
+      continue;
+    }
+
+    highlights.push(group);
+    venueCounts.set(venueKey, venueCount + 1);
+    sourceCounts.set(sourceKey, sourceCount + 1);
+
+    if (highlights.length >= MAX_WEEKLY_HIGHLIGHTS) {
+      break;
+    }
+  }
+
+  if (highlights.length === 0 && sortedGroups.length > 0) {
+    highlights.push(sortedGroups[0]);
+  }
+
+  if (highlights.length < MAX_WEEKLY_HIGHLIGHTS && highlights.length < 2 && deferredGroups.length > 0) {
+    for (const group of deferredGroups) {
+      if (highlights.length >= MAX_WEEKLY_HIGHLIGHTS || highlights.length >= 2) {
+        break;
+      }
+
+      if (highlights.some((existing) => existing.key === group.key)) {
+        continue;
+      }
+
+      highlights.push(group);
+    }
+  }
+
+  const highlightIds = new Set(highlights.flatMap((group) => group.events.map((event) => event.id)));
+  const evaluatedByDay = new Map<string, RankedEvent[]>();
+
+  for (const event of rankedEvents) {
+    const existing = evaluatedByDay.get(event.date) ?? [];
+    existing.push(event);
+    evaluatedByDay.set(event.date, existing);
+  }
+
+  return { highlights, evaluatedByDay, highlightIds };
+}
+
+function renderWeeklyEvaluatedItem(event: RankedEvent, isHighlighted: boolean): string {
+  const title = publicText(event.artist ?? event.title);
+  const venue = publicText(event.venue);
+  const timePart = event.time ? ` — ${event.time}` : "";
+  const reason =
+    isHighlighted
+      ? "Highlighted above."
+      : event.verdict === "Maybe"
+      ? "Not highlighted: maybe — check a clip first."
+      : event.verdict === "Go"
+        ? "Not highlighted: good fit, but not one of the top weekly picks."
+        : `Not highlighted: ${buildSkipReason(event)}.`;
+
+  return `- ${title} — ${venue}${timePart} — ${publicText(reason)} ${formatSourceLinkMarkdown(event)}`;
+}
+
+function renderWeeklyEvaluatedItemHtml(event: RankedEvent, isHighlighted: boolean): string {
+  const title = publicText(event.artist ?? event.title);
+  const venue = publicText(event.venue);
+  const timePart = event.time ? ` — ${event.time}` : "";
+  const reason =
+    isHighlighted
+      ? "Highlighted above."
+      : event.verdict === "Maybe"
+      ? "Not highlighted: maybe — check a clip first."
+      : event.verdict === "Go"
+        ? "Not highlighted: good fit, but not one of the top weekly picks."
+        : `Not highlighted: ${buildSkipReason(event)}.`;
+
+  return `<li>${escapeHtml(title)} — ${escapeHtml(venue)}${escapeHtml(timePart)} — ${escapeHtml(publicText(reason))} ${formatSourceLinkHtml(event)}</li>`;
+}
+
 export function generateEmailPreview(now: Date, rankedEvents: RankedEvent[]): string {
   const { highlights, remaining, noStrongMatches } = selectEmailSections(rankedEvents);
 
@@ -258,6 +514,71 @@ export function generateEmailHtml(now: Date, rankedEvents: RankedEvent[]): strin
     remaining.length > 0
       ? `<ul>${remaining.map(renderEvaluatedItemHtml).join("")}</ul>`
       : "<p>No other evaluated shows tonight.</p>",
+    "<p><em>Evaluated from the configured venue sources; not a complete citywide calendar.</em></p>",
+    "</body></html>"
+  ].join("");
+}
+
+export function generateWeeklyEmailPreview(
+  now: Date,
+  rankedEvents: RankedEvent[],
+  startKey: string,
+  endKey: string
+): string {
+  const { highlights, evaluatedByDay, highlightIds } = selectWeeklyEmailSections(rankedEvents);
+  const sections: string[] = [
+    "Subject: Live Music Scout — This Week around Seattle/Bellevue",
+    "",
+    `Date range: ${formatDateRangeLong(startKey, endKey)}`,
+    "",
+    "## This Week’s Highlights",
+    highlights.length > 0 ? highlights.map(renderWeeklyHighlight).join("\n\n") : "No strong highlights this week."
+  ];
+
+  sections.push("");
+  sections.push("## Evaluated Shows by Day");
+
+  if (evaluatedByDay.size === 0) {
+    sections.push("No other evaluated shows in this window.");
+  } else {
+    for (const [dateKey, events] of Array.from(evaluatedByDay.entries()).sort(([a], [b]) => a.localeCompare(b))) {
+      sections.push("");
+      sections.push(`### ${formatDateKeyWeekday(dateKey)}`);
+      sections.push(events.map((event) => renderWeeklyEvaluatedItem(event, highlightIds.has(event.id))).join("\n"));
+    }
+  }
+
+  sections.push("");
+  sections.push("Evaluated from the configured venue sources; not a complete citywide calendar.");
+
+  return sections.join("\n");
+}
+
+export function generateWeeklyEmailHtml(
+  now: Date,
+  rankedEvents: RankedEvent[],
+  startKey: string,
+  endKey: string
+): string {
+  const { highlights, evaluatedByDay, highlightIds } = selectWeeklyEmailSections(rankedEvents);
+
+  return [
+    "<!doctype html>",
+    '<html><body style="font-family: Arial, sans-serif; line-height: 1.5; color: #222; max-width: 720px; margin: 0 auto; padding: 24px;">',
+    "<p><strong>Subject:</strong> Live Music Scout — This Week around Seattle/Bellevue</p>",
+    `<p><strong>Date range:</strong> ${escapeHtml(formatDateRangeLong(startKey, endKey))}</p>`,
+    "<h2>This Week’s Highlights</h2>",
+    highlights.length > 0 ? highlights.map(renderWeeklyHighlightHtml).join("") : "<p>No strong highlights this week.</p>",
+    "<h2>Evaluated Shows by Day</h2>",
+    evaluatedByDay.size === 0
+      ? "<p>No other evaluated shows in this window.</p>"
+      : Array.from(evaluatedByDay.entries())
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(
+            ([dateKey, events]) =>
+              `<h3>${escapeHtml(formatDateKeyWeekday(dateKey))}</h3><ul>${events.map((event) => renderWeeklyEvaluatedItemHtml(event, highlightIds.has(event.id))).join("")}</ul>`
+          )
+          .join(""),
     "<p><em>Evaluated from the configured venue sources; not a complete citywide calendar.</em></p>",
     "</body></html>"
   ].join("");

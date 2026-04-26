@@ -32,6 +32,11 @@ function addVenueAwareScoring(blob: string, matchReasons: string[]): number {
     matchReasons.push("The Royal Room usually fits jazz, soul, funk, local musicianship, and a more comfortable room");
   }
 
+  if (blob.includes("dimitriou's jazz alley") || blob.includes("jazz alley")) {
+    score += 4;
+    matchReasons.push("Jazz Alley is usually a strong fit for seated jazz, soul, and high-level musicianship");
+  }
+
   if (blob.includes("sunset tavern")) {
     score += 3;
     matchReasons.push("Sunset Tavern often lines up with indie rock, rock, and local band bills");

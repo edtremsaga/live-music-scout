@@ -22,7 +22,7 @@
   },
   {
     "name": "Dimitriou's Jazz Alley",
-    "url": "https://www.jazzalley.com/www-home/artist.jsp",
+    "url": "https://www.jazzalley.com/www-home/calendar.jsp",
     "parser": "jazzAlley",
     "location": "Seattle, WA",
     "areaTags": ["Seattle", "Belltown"]

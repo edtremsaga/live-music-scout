@@ -6,6 +6,8 @@
   "scripts": {
     "scout": "node --import tsx src/index.ts",
     "scout:email": "node --import tsx src/scoutEmail.ts",
+    "scout:week": "node --import tsx src/scoutWeek.ts",
+    "scout:week:email": "node --import tsx src/scoutWeekEmail.ts",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/**/*.test.ts"
   },

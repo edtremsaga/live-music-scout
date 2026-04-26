@@ -1,5 +1,6 @@
 export type Confidence = "High" | "Medium" | "Low";
 export type Verdict = "Go" | "Maybe" | "Skip";
+export type ReportKind = "tonight" | "week";
 
 export type LiveMusicEvent = {
   id: string;
@@ -67,7 +68,8 @@ export type SourceRunStatus = {
   fetchStatus: FetchStatus;
   message: string;
   candidateCount: number;
-  tonightCount: number;
+  matchedCount: number;
+  matchedLabel: string;
   parserConfidence?: Confidence;
   uncertainCount?: number;
   likelyMusicCount?: number;

@@ -25,6 +25,45 @@ export function getTonightKey(now: Date, timezone = PACIFIC_TIMEZONE): string {
   return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
+export function getDateKeyWithOffset(now: Date, offsetDays: number, timezone = PACIFIC_TIMEZONE): string {
+  const shifted = new Date(now);
+  shifted.setUTCDate(shifted.getUTCDate() + offsetDays);
+  return getTonightKey(shifted, timezone);
+}
+
+export function isDateInRange(dateKey: string, startKey: string, endKey: string): boolean {
+  return dateKey >= startKey && dateKey <= endKey;
+}
+
+export function formatDateKeyLong(dateKey: string, timezone = PACIFIC_TIMEZONE): string {
+  const date = new Date(`${dateKey}T12:00:00`);
+  return formatTonightLong(date, timezone);
+}
+
+export function formatDateRangeLong(startKey: string, endKey: string, timezone = PACIFIC_TIMEZONE): string {
+  return `${formatDateKeyLong(startKey, timezone)} – ${formatDateKeyLong(endKey, timezone)}`;
+}
+
+export function formatDateKeyWeekday(dateKey: string, timezone = PACIFIC_TIMEZONE): string {
+  const date = new Date(`${dateKey}T12:00:00`);
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    weekday: "long",
+    month: "long",
+    day: "numeric"
+  }).format(date);
+}
+
+export function formatDateKeyShort(dateKey: string, timezone = PACIFIC_TIMEZONE): string {
+  const date = new Date(`${dateKey}T12:00:00`);
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    weekday: "short",
+    month: "short",
+    day: "numeric"
+  }).format(date);
+}
+
 export function formatTonightLong(now: Date, timezone = PACIFIC_TIMEZONE): string {
   return new Intl.DateTimeFormat("en-US", {
     timeZone: timezone,
@@ -50,6 +89,10 @@ export function decodeHtmlEntities(input: string): string {
     .replace(/&rsquo;/g, "'")
     .replace(/&ldquo;/g, "\"")
     .replace(/&rdquo;/g, "\"")
+    .replace(/&ndash;/g, "–")
+    .replace(/&mdash;/g, "—")
+    .replace(/&#8211;/g, "–")
+    .replace(/&#8212;/g, "—")
     .replace(/&#8216;/g, "‘")
     .replace(/&#8217;/g, "'")
     .replace(/&#8220;/g, "“")
