@@ -1,0 +1,58 @@
+[
+  {
+    "name": "Tractor Tavern",
+    "url": "https://www.tractortavern.com/calendar/",
+    "parser": "tractor",
+    "location": "Seattle, WA",
+    "areaTags": ["Seattle", "Ballard"]
+  },
+  {
+    "name": "Sunset Tavern",
+    "url": "https://sunsettavern.com/shows/",
+    "parser": "sunset",
+    "location": "Seattle, WA",
+    "areaTags": ["Seattle", "Ballard"]
+  },
+  {
+    "name": "The Royal Room",
+    "url": "https://theroyalroomseattle.com/events/",
+    "parser": "royalRoom",
+    "location": "Seattle, WA",
+    "areaTags": ["Seattle", "Columbia City"]
+  },
+  {
+    "name": "Dimitriou's Jazz Alley",
+    "url": "https://www.jazzalley.com/www-home/artist.jsp",
+    "parser": "jazzAlley",
+    "location": "Seattle, WA",
+    "areaTags": ["Seattle", "Belltown"]
+  },
+  {
+    "name": "Nectar Lounge",
+    "url": "https://nectarlounge.com/events/",
+    "parser": "nectar",
+    "location": "Seattle, WA",
+    "areaTags": ["Seattle", "Fremont"]
+  },
+  {
+    "name": "SeaMonster Lounge",
+    "url": "https://www.seamonsterlounge.com/calendar",
+    "parser": "seaMonster",
+    "location": "Seattle, WA",
+    "areaTags": ["Seattle", "Wallingford"]
+  },
+  {
+    "name": "Easy Street Records",
+    "url": "https://easystreetonline.com/Events",
+    "parser": "easyStreet",
+    "location": "Seattle, WA",
+    "areaTags": ["Seattle", "West Seattle"]
+  },
+  {
+    "name": "STG Presents",
+    "url": "https://www.stgpresents.org/events",
+    "parser": "stg",
+    "location": "Seattle, WA",
+    "areaTags": ["Seattle", "Downtown", "University District"]
+  }
+]

@@ -1,0 +1,37 @@
+{
+  "homeBase": "Bellevue, WA",
+  "targetAreas": ["Bellevue", "Seattle", "Eastside", "nearby venues within a reasonable drive"],
+  "preferredGenres": [
+    "rock",
+    "indie rock",
+    "Americana",
+    "funk",
+    "soul",
+    "jazz",
+    "jam",
+    "singer-songwriter",
+    "classic rock tribute",
+    "guitar-forward music",
+    "bass-forward live musicianship"
+  ],
+  "avoidGenres": [
+    "EDM",
+    "DJ",
+    "DJ-only nights",
+    "metal",
+    "hardcore",
+    "teen pop"
+  ],
+  "venuePreferences": [
+    "small clubs",
+    "seated or comfortable venues",
+    "venues with food",
+    "jam nights",
+    "strong local musicianship",
+    "winery or outdoor summer concerts"
+  ],
+  "avoidSignals": [
+    "very late",
+    "high-friction events unless especially notable"
+  ]
+}

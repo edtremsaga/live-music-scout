@@ -1,0 +1,25 @@
+{
+  "name": "live-music-scout",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local TypeScript CLI for scouting Seattle-area live music tonight.",
+  "scripts": {
+    "scout": "node --import tsx src/index.ts",
+    "scout:email": "node --import tsx src/scoutEmail.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/**/*.test.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/nodemailer": "^8.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "nodemailer": "^8.0.6"
+  }
+}
