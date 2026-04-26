@@ -2,6 +2,8 @@
 
 Live Music Scout is a local TypeScript CLI that checks a curated set of Seattle-area venue pages, extracts candidate events for tonight, ranks them against your preferences, and either prints a markdown email preview or sends that same body as a manual email.
 
+For product direction and next-step planning, see [ROADMAP.md](/Users/edwardtremblay/Library/CloudStorage/OneDrive-Personal/vibe coding/live music scout/ROADMAP.md).
+
 This MVP is intentionally narrow:
 
 - local command only
