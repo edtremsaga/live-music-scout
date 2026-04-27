@@ -95,6 +95,17 @@
     "notes": "parser TODO: Tim's Tavern is configured as a year-round Seattle live-music club source, but the site is currently behind a Cloudflare challenge that blocked reliable calendar parsing in this pass"
   },
   {
+    "name": "El Corazon",
+    "url": "https://elcorazonseattle.com/",
+    "parser": "configuredTodo",
+    "location": "Seattle, WA",
+    "areaTags": ["Seattle", "Eastlake"],
+    "sourceType": "venue",
+    "musicOnly": true,
+    "parserStatus": "todo",
+    "notes": "parser TODO: El Corazon is configured as a year-round Seattle live-music club source, but a reliable parser is not implemented yet"
+  },
+  {
     "name": "Remlinger Farms Summer Concerts",
     "url": "https://remlingerfarms.com/remlinger-summer-concerts/",
     "parser": "configuredTodo",
