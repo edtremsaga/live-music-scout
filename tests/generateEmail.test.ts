@@ -65,6 +65,56 @@ test("Jazz Alley URL gets Jazz Alley event page label", () => {
   assert.equal(getSourceLinkLabel(event), "Jazz Alley event page");
 });
 
+test("Triple Door URL gets The Triple Door event page label", () => {
+  const event = makeRankedEvent({
+    sourceName: "The Triple Door",
+    venue: "The Triple Door",
+    url: "https://thetripledoor.net/event/1/101/test-artist"
+  });
+
+  assert.equal(getSourceLinkLabel(event), "The Triple Door event page");
+});
+
+test("Bake's Place URL gets Bake's Place event page label", () => {
+  const event = makeRankedEvent({
+    sourceName: "Bake's Place",
+    venue: "Bake's Place",
+    url: "https://bakesplacebellevue.com/bellevue-bellevue-bake-s-place-bar-and-bistro-live-music"
+  });
+
+  assert.equal(getSourceLinkLabel(event), "Bake's Place event page");
+});
+
+test("Nectar Lounge URL gets Nectar Lounge event page label", () => {
+  const event = makeRankedEvent({
+    sourceName: "Nectar Lounge",
+    venue: "Nectar Lounge",
+    url: "https://www.tixr.com/groups/nectarlounge/events/test-show"
+  });
+
+  assert.equal(getSourceLinkLabel(event), "Nectar Lounge event page");
+});
+
+test("Hidden Hall URL gets Hidden Hall event page label", () => {
+  const event = makeRankedEvent({
+    sourceName: "Hidden Hall",
+    venue: "Hidden Hall",
+    url: "https://www.tixr.com/groups/hiddenhall/events/test-show"
+  });
+
+  assert.equal(getSourceLinkLabel(event), "Hidden Hall event page");
+});
+
+test("Skylark Cafe URL gets Skylark Cafe event page label", () => {
+  const event = makeRankedEvent({
+    sourceName: "Skylark Cafe",
+    venue: "Skylark Cafe",
+    url: "https://www.skylarkcafe.com/global-events/test-show"
+  });
+
+  assert.equal(getSourceLinkLabel(event), "Skylark Cafe event page");
+});
+
 test("fallback URL gets Event page label", () => {
   const event = makeRankedEvent({
     url: "https://example.com/events/test"
@@ -243,6 +293,129 @@ test("weekly highlights apply a light venue diversity cap when alternatives exis
   assert.match(output, /### Pat Metheny Side-Eye III\+/);
 });
 
+test("grouped multi-night strong run can beat a generic one-off weekly highlight", () => {
+  const tractorOne = makeRankedEvent({
+    id: "tractor-one",
+    title: "Tractor One",
+    artist: "Tractor One",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/tractor-one",
+    date: "2026-04-26",
+    score: 32,
+    verdict: "Go"
+  });
+  const tractorTwo = makeRankedEvent({
+    id: "tractor-two",
+    title: "Tractor Two",
+    artist: "Tractor Two",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/tractor-two",
+    date: "2026-04-27",
+    score: 31,
+    verdict: "Go"
+  });
+  const vincentOne = makeRankedEvent({
+    id: "vincent-one",
+    title: "KEXP's Roadhouse Presents: Vincent Neil Emerson w/ Kade Hoffman NIGHT ONE",
+    artist: "KEXP's Roadhouse Presents: Vincent Neil Emerson w/ Kade Hoffman NIGHT ONE",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/vincent-one",
+    date: "2026-05-01",
+    score: 24,
+    verdict: "Go"
+  });
+  const vincentTwo = makeRankedEvent({
+    id: "vincent-two",
+    title: "KEXP's Roadhouse Presents: Vincent Neil Emerson w/ Kade Hoffman NIGHT TWO",
+    artist: "KEXP's Roadhouse Presents: Vincent Neil Emerson w/ Kade Hoffman NIGHT TWO",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/vincent-two",
+    date: "2026-05-02",
+    score: 23,
+    verdict: "Go"
+  });
+  const jazz = makeRankedEvent({
+    id: "jazz",
+    title: "Pat Metheny Side-Eye III+",
+    artist: "Pat Metheny Side-Eye III+",
+    venue: "Dimitriou's Jazz Alley",
+    sourceName: "Dimitriou's Jazz Alley",
+    url: "https://www.jazzalley.com/www-home/artist.jsp?shownum=8739",
+    date: "2026-04-26",
+    score: 27,
+    verdict: "Go"
+  });
+  const stg = makeRankedEvent({
+    id: "stg",
+    title: "Alice Phoebe Lou",
+    artist: "Alice Phoebe Lou",
+    venue: "The Neptune Theatre",
+    sourceName: "STG Presents",
+    url: "https://www.stgpresents.org/events/alice-phoebe-lou/",
+    date: "2026-04-28",
+    score: 26,
+    verdict: "Maybe"
+  });
+  const genericRoyal = makeRankedEvent({
+    id: "generic-royal",
+    title: "Happy Hour with Sheryl Wiser",
+    artist: "Happy Hour with Sheryl Wiser",
+    venue: "The Royal Room",
+    sourceName: "The Royal Room",
+    url: "https://theroyalroomseattle.com/event/happy-hour-sheryl-wiser/",
+    date: "2026-05-01",
+    score: 18,
+    verdict: "Go"
+  });
+  const otherOne = makeRankedEvent({
+    id: "other-one",
+    title: "Other One",
+    artist: "Other One",
+    venue: "Another Venue",
+    sourceName: "Another Source",
+    url: "https://example.com/other-one",
+    date: "2026-04-29",
+    score: 21,
+    verdict: "Go"
+  });
+  const otherTwo = makeRankedEvent({
+    id: "other-two",
+    title: "Other Two",
+    artist: "Other Two",
+    venue: "Another Venue 2",
+    sourceName: "Another Source 2",
+    url: "https://example.com/other-two",
+    date: "2026-04-30",
+    score: 20,
+    verdict: "Go"
+  });
+  const otherThree = makeRankedEvent({
+    id: "other-three",
+    title: "Other Three",
+    artist: "Other Three",
+    venue: "Another Venue 3",
+    sourceName: "Another Source 3",
+    url: "https://example.com/other-three",
+    date: "2026-05-03",
+    score: 19,
+    verdict: "Go"
+  });
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-04-26T12:00:00-07:00"),
+    [tractorOne, tractorTwo, vincentOne, vincentTwo, jazz, stg, genericRoyal, otherOne, otherTwo, otherThree],
+    "2026-04-26",
+    "2026-05-03"
+  );
+
+  assert.match(output, /### KEXP's Roadhouse Presents: Vincent Neil Emerson w\/ Kade Hoffman/);
+  assert.doesNotMatch(output, /### Happy Hour with Sheryl Wiser/);
+});
+
 test("weekly diversity does not force weak events into highlights", () => {
   const tractorOne = makeRankedEvent({
     id: "strong-one",
@@ -306,6 +479,87 @@ test("weekly diversity does not force weak events into highlights", () => {
   assert.match(output, /### Strong Two/);
   assert.match(output, /### Strong Three/);
   assert.doesNotMatch(output, /### Weak Other/);
+});
+
+test("ambiguous Royal Room wording stays soft in evaluated shows", () => {
+  const highlighted = makeRankedEvent({
+    id: "highlighted",
+    title: "Clear Headliner",
+    artist: "Clear Headliner",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/highlighted",
+    date: "2026-04-26",
+    score: 30,
+    verdict: "Go"
+  });
+  const ambiguousRoyal = makeRankedEvent({
+    id: "ambiguous-royal",
+    title: "Zoë's Birthday Bash",
+    artist: "Zoë's Birthday Bash",
+    venue: "The Royal Room",
+    sourceName: "The Royal Room",
+    url: "https://theroyalroomseattle.com/event/zoes_bday_bash/",
+    date: "2026-04-27",
+    score: 1,
+    verdict: "Skip",
+    classification: {
+      isLikelyMusic: false,
+      musicConfidence: "Low",
+      eventType: "unknown",
+      fitReason: "fixture fit reason"
+    }
+  });
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-04-26T12:00:00-07:00"),
+    [highlighted, ambiguousRoyal],
+    "2026-04-26",
+    "2026-05-03"
+  );
+
+  assert.match(output, /Not highlighted: unclear from listing — check details if the title interests you\./);
+});
+
+test("obvious STG non-music wording is specific", () => {
+  const highlighted = makeRankedEvent({
+    id: "highlighted",
+    title: "Clear Headliner",
+    artist: "Clear Headliner",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/highlighted",
+    date: "2026-04-26",
+    score: 30,
+    verdict: "Go"
+  });
+  const stgNonMusic = makeRankedEvent({
+    id: "silent-movie",
+    title: "Silent Movie Mondays – Faust (1926)",
+    artist: "Silent Movie Mondays – Faust (1926)",
+    venue: "The Paramount Theatre",
+    sourceName: "STG Presents",
+    url: "https://www.stgpresents.org/events/silent-movie-mondays-faust/",
+    date: "2026-04-27",
+    score: -3,
+    verdict: "Skip",
+    classification: {
+      isLikelyMusic: false,
+      musicConfidence: "High",
+      eventType: "theater",
+      fitReason: "fixture fit reason",
+      exclusionReason: "non-music signals: film"
+    }
+  });
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-04-26T12:00:00-07:00"),
+    [highlighted, stgNonMusic],
+    "2026-04-26",
+    "2026-05-03"
+  );
+
+  assert.match(output, /Not highlighted: theater\/ballet\/film, not this scout’s target\./);
 });
 
 test("weekly preview does not merge unrelated shows that share generic words", () => {

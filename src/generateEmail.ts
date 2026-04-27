@@ -10,6 +10,7 @@ type WeeklyHighlightGroup = {
 const MAX_WEEKLY_HIGHLIGHTS = 8;
 const MAX_WEEKLY_HIGHLIGHTS_PER_VENUE = 2;
 const MAX_WEEKLY_HIGHLIGHTS_PER_SOURCE = 2;
+const WEEKLY_DIVERSITY_OVERRIDE_GAP = 1;
 
 function escapeHtml(value: string): string {
   return value
@@ -39,8 +40,28 @@ export function getSourceLinkLabel(event: Pick<RankedEvent, "url" | "sourceName"
     return "Royal Room event page";
   }
 
+  if (event.venue === "Bake's Place" || event.sourceName === "Bake's Place" || url.includes("bakesplacebellevue.com")) {
+    return "Bake's Place event page";
+  }
+
+  if (event.venue === "Nectar Lounge" || event.sourceName === "Nectar Lounge" || url.includes("nectarlounge.com")) {
+    return "Nectar Lounge event page";
+  }
+
+  if (event.venue === "Hidden Hall" || event.sourceName === "Hidden Hall" || url.includes("hiddenhall.com")) {
+    return "Hidden Hall event page";
+  }
+
   if (event.venue === "Dimitriou's Jazz Alley" || event.sourceName === "Dimitriou's Jazz Alley" || url.includes("jazzalley.com")) {
     return "Jazz Alley event page";
+  }
+
+  if (event.venue === "The Triple Door" || event.sourceName === "The Triple Door" || url.includes("thetripledoor.net")) {
+    return "The Triple Door event page";
+  }
+
+  if (event.venue === "Skylark Cafe" || event.sourceName === "Skylark Cafe" || url.includes("skylarkcafe.com")) {
+    return "Skylark Cafe event page";
   }
 
   if (event.sourceName === "STG Presents" || url.includes("stgpresents.org")) {
@@ -80,13 +101,37 @@ function buildWhyLine(event: RankedEvent): string {
   }
 
   if (event.venue === "The Royal Room") {
+    if (titleLower.includes("album release")) {
+      return "An album-release night at The Royal Room with a stronger musicianship-first feel than a generic listing.";
+    }
+
     return titleLower.includes("trio") || titleLower.includes("jammah") || titleLower.includes("jam")
       ? "A likely groove/jam-oriented Royal Room show in a comfortable room with strong local-musician energy."
-      : "A Royal Room date that looks promising if you want a comfortable room and musicianship-first energy.";
+      : "A Royal Room date that seems musically promising, though the listing itself is fairly light on detail.";
+  }
+
+  if (event.venue === "Bake's Place") {
+    return "An Eastside listening-room style booking at Bake’s Place — a good option if you want a Bellevue-area dinner-and-show night with strong musicianship.";
+  }
+
+  if (event.venue === "Nectar Lounge") {
+    return "A Nectar Lounge booking with strong club-show energy — worth a look if you want a fuller Fremont room and a more groove-forward night.";
+  }
+
+  if (event.venue === "Hidden Hall") {
+    return "A Hidden Hall booking with a bigger Fremont-room feel — promising if you want a ticketed club night built around the artist lineup.";
   }
 
   if (event.venue === "Dimitriou's Jazz Alley") {
     return "A seated Jazz Alley date with a strong musicianship-first feel — a good option if you want a more focused listening-room night.";
+  }
+
+  if (event.venue === "The Triple Door") {
+    return "A seated Triple Door show with strong listening-room potential — a good option if you want a more focused downtown concert night.";
+  }
+
+  if (event.venue === "Skylark Cafe") {
+    return "A local-band Skylark night with strong West Seattle club energy — a good option if you want something smaller, scrappier, and close to the neighborhood scene.";
   }
 
   if (event.sourceName === "STG Presents") {
@@ -100,12 +145,24 @@ function buildWhyLine(event: RankedEvent): string {
 
 function buildSkipReason(event: RankedEvent): string {
   if (!event.classification.isLikelyMusic) {
+    if (event.sourceName === "The Royal Room" && event.classification.eventType === "unknown") {
+      return "unclear from listing — check details if the title interests you";
+    }
+
     if (event.classification.eventType === "talk" || event.classification.eventType === "comedy") {
-      return "appears to be comedy/talk rather than live music";
+      return event.sourceName === "STG Presents"
+        ? "appears to be comedy/talk rather than live music"
+        : "appears to be comedy/talk rather than live music";
     }
 
     if (event.classification.eventType === "theater" || event.classification.eventType === "dance") {
-      return "probably not a live-music fit";
+      return event.sourceName === "STG Presents"
+        ? "theater/ballet/film, not this scout’s target"
+        : "probably not a live-music fit";
+    }
+
+    if (event.sourceName === "The Royal Room") {
+      return "possible music event, but the listing is too sparse to rank confidently";
     }
 
     return "probably not a live-music fit";
@@ -278,6 +335,23 @@ function cleanGroupedHighlightDisplayTitle(value: string): string {
     .trim();
 }
 
+function getWeeklyHighlightGroupScore(group: WeeklyHighlightGroup): number {
+  const uniqueDates = new Set(group.events.map((event) => event.date)).size;
+  const multiNightBonus = uniqueDates > 1 ? Math.min(uniqueDates - 1, 2) * 3 + 1 : 0;
+  return group.representative.score + multiNightBonus;
+}
+
+function countBy<T>(items: T[], getKey: (item: T) => string): Map<string, number> {
+  const counts = new Map<string, number>();
+
+  for (const item of items) {
+    const key = getKey(item);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+
+  return counts;
+}
+
 function buildWeeklyGroupTake(group: WeeklyHighlightGroup): string {
   const allSoldOut = group.events.every((event) => getAvailabilityLine(event) === "Sold out");
 
@@ -383,50 +457,45 @@ function selectWeeklyEmailSections(rankedEvents: RankedEvent[]): {
   }
 
   const sortedGroups = Array.from(groupedHighlights.values())
-    .sort((a, b) => b.representative.score - a.representative.score || a.representative.title.localeCompare(b.representative.title));
-  const shouldApplyVenueCap = new Set(sortedGroups.map((group) => publicText(group.representative.venue))).size > 1;
-  const shouldApplySourceCap = new Set(sortedGroups.map((group) => publicText(group.representative.sourceName))).size > 1;
-  const venueCounts = new Map<string, number>();
-  const sourceCounts = new Map<string, number>();
+    .sort((a, b) => getWeeklyHighlightGroupScore(b) - getWeeklyHighlightGroupScore(a) || a.representative.title.localeCompare(b.representative.title));
   const highlights: WeeklyHighlightGroup[] = [];
-  const deferredGroups: WeeklyHighlightGroup[] = [];
+  const venueDiversityPossible = new Set(sortedGroups.map((group) => publicText(group.representative.venue))).size > 1;
+  const sourceDiversityPossible = new Set(sortedGroups.map((group) => publicText(group.representative.sourceName))).size > 1;
 
-  for (const group of sortedGroups) {
-    const venueKey = publicText(group.representative.venue);
-    const sourceKey = publicText(group.representative.sourceName);
-    const venueCount = venueCounts.get(venueKey) ?? 0;
-    const sourceCount = sourceCounts.get(sourceKey) ?? 0;
-    const venueBlocked = shouldApplyVenueCap && venueCount >= MAX_WEEKLY_HIGHLIGHTS_PER_VENUE;
-    const sourceBlocked = shouldApplySourceCap && sourceCount >= MAX_WEEKLY_HIGHLIGHTS_PER_SOURCE;
-
-    if (venueBlocked || sourceBlocked) {
-      deferredGroups.push(group);
-      continue;
-    }
-
-    highlights.push(group);
-    venueCounts.set(venueKey, venueCount + 1);
-    sourceCounts.set(sourceKey, sourceCount + 1);
-
+  for (let index = 0; index < sortedGroups.length; index += 1) {
     if (highlights.length >= MAX_WEEKLY_HIGHLIGHTS) {
       break;
     }
-  }
 
-  if (highlights.length === 0 && sortedGroups.length > 0) {
-    highlights.push(sortedGroups[0]);
-  }
+    const group = sortedGroups[index];
+    const venueCounts = countBy(highlights, (item) => publicText(item.representative.venue));
+    const sourceCounts = countBy(highlights, (item) => publicText(item.representative.sourceName));
+    const venueKey = publicText(group.representative.venue);
+    const sourceKey = publicText(group.representative.sourceName);
+    const venueOverCap = venueDiversityPossible && (venueCounts.get(venueKey) ?? 0) >= MAX_WEEKLY_HIGHLIGHTS_PER_VENUE;
+    const sourceOverCap = sourceDiversityPossible && (sourceCounts.get(sourceKey) ?? 0) >= MAX_WEEKLY_HIGHLIGHTS_PER_SOURCE;
 
-  if (highlights.length < MAX_WEEKLY_HIGHLIGHTS && highlights.length < 2 && deferredGroups.length > 0) {
-    for (const group of deferredGroups) {
-      if (highlights.length >= MAX_WEEKLY_HIGHLIGHTS || highlights.length >= 2) {
-        break;
-      }
+    if (!venueOverCap && !sourceOverCap) {
+      highlights.push(group);
+      continue;
+    }
 
-      if (highlights.some((existing) => existing.key === group.key)) {
-        continue;
-      }
+    const remainingAlternatives = sortedGroups.slice(index + 1).filter((candidate) => {
+      const candidateVenue = publicText(candidate.representative.venue);
+      const candidateSource = publicText(candidate.representative.sourceName);
+      return candidateVenue !== venueKey || candidateSource !== sourceKey;
+    });
 
+    if (remainingAlternatives.length === 0) {
+      highlights.push(group);
+      continue;
+    }
+
+    const bestAlternativeScore = getWeeklyHighlightGroupScore(remainingAlternatives[0]);
+    const groupScore = getWeeklyHighlightGroupScore(group);
+    const isMultiNightRun = new Set(group.events.map((event) => event.date)).size > 1;
+
+    if (isMultiNightRun && groupScore >= bestAlternativeScore + WEEKLY_DIVERSITY_OVERRIDE_GAP) {
       highlights.push(group);
     }
   }

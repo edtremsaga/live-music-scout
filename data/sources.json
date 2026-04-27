@@ -4,55 +4,193 @@
     "url": "https://www.tractortavern.com/calendar/",
     "parser": "tractor",
     "location": "Seattle, WA",
-    "areaTags": ["Seattle", "Ballard"]
+    "areaTags": ["Seattle", "Ballard"],
+    "sourceType": "venue",
+    "musicOnly": true,
+    "parserStatus": "live"
   },
   {
     "name": "Sunset Tavern",
     "url": "https://sunsettavern.com/shows/",
     "parser": "sunset",
     "location": "Seattle, WA",
-    "areaTags": ["Seattle", "Ballard"]
+    "areaTags": ["Seattle", "Ballard"],
+    "sourceType": "venue",
+    "musicOnly": true,
+    "parserStatus": "todo"
   },
   {
     "name": "The Royal Room",
     "url": "https://theroyalroomseattle.com/events/",
     "parser": "royalRoom",
     "location": "Seattle, WA",
-    "areaTags": ["Seattle", "Columbia City"]
+    "areaTags": ["Seattle", "Columbia City"],
+    "sourceType": "venue",
+    "musicOnly": true,
+    "parserStatus": "live"
   },
   {
     "name": "Dimitriou's Jazz Alley",
     "url": "https://www.jazzalley.com/www-home/calendar.jsp",
     "parser": "jazzAlley",
     "location": "Seattle, WA",
-    "areaTags": ["Seattle", "Belltown"]
+    "areaTags": ["Seattle", "Belltown"],
+    "sourceType": "venue",
+    "musicOnly": true,
+    "parserStatus": "live"
+  },
+  {
+    "name": "Hidden Hall",
+    "url": "https://hiddenhall.com/events/calendar/",
+    "parser": "hiddenHall",
+    "location": "Seattle, WA",
+    "areaTags": ["Seattle", "Fremont"],
+    "sourceType": "venue",
+    "musicOnly": true,
+    "parserStatus": "live",
+    "notes": "Shared management calendar source with Nectar Lounge for ticketed Fremont music events at Hidden Hall"
+  },
+  {
+    "name": "Bake's Place",
+    "url": "https://bakesplacebellevue.com/bellevue-bellevue-bake-s-place-bar-and-bistro-live-music",
+    "parser": "bakesPlace",
+    "location": "Bellevue, WA",
+    "areaTags": ["Bellevue", "Eastside"],
+    "sourceType": "venue",
+    "musicOnly": true,
+    "parserStatus": "live",
+    "notes": "Eastside live music source for seated listening-room and dinner-show bookings at Bake's Place"
+  },
+  {
+    "name": "The Triple Door",
+    "url": "https://www.thetripledoor.net/mainstage-calendar",
+    "parser": "tripleDoor",
+    "location": "Seattle, WA",
+    "areaTags": ["Seattle", "Downtown"],
+    "sourceType": "venue",
+    "musicOnly": true,
+    "parserStatus": "live",
+    "notes": "Mainstage calendar source for seated music and listening-room bookings at The Triple Door"
+  },
+  {
+    "name": "Skylark Cafe",
+    "url": "https://www.skylarkcafe.com/calendar",
+    "parser": "skylark",
+    "location": "Seattle, WA",
+    "areaTags": ["Seattle", "West Seattle"],
+    "sourceType": "venue",
+    "musicOnly": true,
+    "parserStatus": "live",
+    "notes": "West Seattle live music calendar source for local-band, rock, and club-night bookings at Skylark Cafe"
+  },
+  {
+    "name": "Remlinger Farms Summer Concerts",
+    "url": "https://remlingerfarms.com/remlinger-summer-concerts/",
+    "parser": "configuredTodo",
+    "location": "Carnation, WA",
+    "areaTags": ["Eastside", "Carnation", "Outdoor"],
+    "sourceType": "seasonal_outdoor",
+    "musicOnly": true,
+    "seasonal": true,
+    "duplicateGroup": "remlinger-farms",
+    "parserStatus": "todo",
+    "notes": "parser TODO: Remlinger Farms Summer Concerts is configured as an outdoor summer music series source, but event output may overlap with STG venue coverage and needs explicit dedupe if a parser is added"
+  },
+  {
+    "name": "Marymoor Park Concerts",
+    "url": "https://www.marymoorlive.com/",
+    "parser": "configuredTodo",
+    "location": "Redmond, WA",
+    "areaTags": ["Eastside", "Redmond", "Outdoor"],
+    "sourceType": "seasonal_outdoor",
+    "musicOnly": true,
+    "seasonal": true,
+    "parserStatus": "todo",
+    "notes": "parser TODO: Marymoor Park Concerts is configured as an outdoor summer music series source, but a reliable parser is not implemented yet"
+  },
+  {
+    "name": "Chateau Ste. Michelle Summer Concerts",
+    "url": "https://www.ste-michelle.com/visit-us/summer-concerts",
+    "parser": "configuredTodo",
+    "location": "Woodinville, WA",
+    "areaTags": ["Eastside", "Woodinville", "Outdoor"],
+    "sourceType": "seasonal_outdoor",
+    "musicOnly": true,
+    "seasonal": true,
+    "parserStatus": "todo",
+    "notes": "parser TODO: Chateau Ste. Michelle Summer Concerts is configured as an outdoor summer music series source, but a reliable parser is not implemented yet"
+  },
+  {
+    "name": "Woodland Park Zoo / ZooTunes",
+    "url": "https://www.zoo.org/zootunes",
+    "parser": "configuredTodo",
+    "location": "Seattle, WA",
+    "areaTags": ["Seattle", "Phinney Ridge", "Outdoor"],
+    "sourceType": "seasonal_outdoor",
+    "musicOnly": true,
+    "seasonal": true,
+    "parserStatus": "todo",
+    "notes": "parser TODO: Woodland Park Zoo / ZooTunes is configured as an outdoor summer music series source, but a reliable parser is not implemented yet"
+  },
+  {
+    "name": "Climate Pledge Arena",
+    "url": "https://climatepledgearena.com/",
+    "parser": "configuredTodo",
+    "location": "Seattle, WA",
+    "areaTags": ["Seattle", "Lower Queen Anne"],
+    "sourceType": "large_venue",
+    "musicOnly": true,
+    "parserStatus": "todo",
+    "notes": "parser TODO: Climate Pledge Arena is configured as a music-only large venue source; sports and non-music arena events should be excluded if a parser is added"
   },
   {
     "name": "Nectar Lounge",
-    "url": "https://nectarlounge.com/events/",
+    "url": "https://nectarlounge.com/events/calendar/",
     "parser": "nectar",
     "location": "Seattle, WA",
-    "areaTags": ["Seattle", "Fremont"]
+    "areaTags": ["Seattle", "Fremont"],
+    "sourceType": "venue",
+    "musicOnly": true,
+    "parserStatus": "live",
+    "notes": "Shared management calendar source with Hidden Hall for ticketed music events at Nectar Lounge"
   },
   {
     "name": "SeaMonster Lounge",
     "url": "https://www.seamonsterlounge.com/calendar",
     "parser": "seaMonster",
     "location": "Seattle, WA",
-    "areaTags": ["Seattle", "Wallingford"]
+    "areaTags": ["Seattle", "Wallingford"],
+    "sourceType": "venue",
+    "musicOnly": true,
+    "parserStatus": "todo"
   },
   {
     "name": "Easy Street Records",
     "url": "https://easystreetonline.com/Events",
     "parser": "easyStreet",
     "location": "Seattle, WA",
-    "areaTags": ["Seattle", "West Seattle"]
+    "areaTags": ["Seattle", "West Seattle"],
+    "sourceType": "venue",
+    "musicOnly": true,
+    "parserStatus": "todo"
   },
   {
     "name": "STG Presents",
     "url": "https://www.stgpresents.org/events",
     "parser": "stg",
     "location": "Seattle, WA",
-    "areaTags": ["Seattle", "Downtown", "University District"]
+    "areaTags": ["Seattle", "Downtown", "University District"],
+    "sourceType": "promoter",
+    "musicOnly": true,
+    "coveredVenues": [
+      "The Paramount Theatre",
+      "The Moore Theatre",
+      "The Neptune Theatre",
+      "5th Avenue Theatre",
+      "Kerry Hall",
+      "Remlinger Farms"
+    ],
+    "parserStatus": "live",
+    "notes": "Promoter source covering multiple venues; keep event handling music-focused because STG also lists theater, comedy, film, family, and speaker events"
   }
 ]

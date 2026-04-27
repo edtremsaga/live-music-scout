@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { extractTime, getTextLines, normalizeWhitespace, parseMonthDayText } from "../dateUtils.js";
+import { extractTime, getTextLines, normalizeWhitespace, parseMonthDayText, stripHtml } from "../dateUtils.js";
 import type { LiveMusicEvent, ParserContext, ParserResult } from "../types.js";
 
 const KNOWN_VENUES = [
@@ -30,15 +30,22 @@ function looksLikeTitle(line: string): boolean {
 }
 
 function extractEventUrl(html: string, title: string): string | undefined {
-  const escapedTitle = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const linkPattern = new RegExp(`<a[^>]+href="([^"]+)"[^>]*>\\s*${escapedTitle}\\s*<`, "i");
-  const match = html.match(linkPattern);
+  const normalizedTitle = normalizeWhitespace(stripHtml(title)).toLowerCase();
 
-  if (!match?.[1]) {
-    return undefined;
+  for (const match of html.matchAll(/<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi)) {
+    const href = match[1];
+    const anchorText = normalizeWhitespace(stripHtml(match[2])).toLowerCase();
+
+    if (!href.includes("/events/")) {
+      continue;
+    }
+
+    if (anchorText === normalizedTitle || anchorText.includes(normalizedTitle) || normalizedTitle.includes(anchorText)) {
+      return href.startsWith("http") ? href : `https://www.stgpresents.org${href}`;
+    }
   }
 
-  return match[1].startsWith("http") ? match[1] : `https://www.stgpresents.org${match[1]}`;
+  return undefined;
 }
 
 export function parseStg(html: string, context: ParserContext): ParserResult {

@@ -66,6 +66,16 @@ const MEDIUM_MUSIC_TERMS = [
   "duo"
 ];
 
+const AMBIGUOUS_LISTING_TERMS = [
+  "happy hour",
+  "birthday bash",
+  "workshop",
+  "showcase",
+  "launch",
+  "circle",
+  "sessions"
+];
+
 function toBlob(event: LiveMusicEvent): string {
   return [
     event.title,
@@ -130,9 +140,11 @@ function classifyEventType(blob: string): EventClassification["eventType"] {
 export function classifyEvent(event: LiveMusicEvent): ClassifiedEvent {
   const blob = toBlob(event);
   const title = event.artist ?? event.title;
+  const titleLower = title.toLowerCase();
   const strongMusicMatches = countMatches(blob, STRONG_MUSIC_TERMS);
   const mediumMusicMatches = countMatches(blob, MEDIUM_MUSIC_TERMS);
   const cautionMatches = countMatches(blob, CAUTION_TERMS);
+  const ambiguousListingMatches = countMatches(titleLower, AMBIGUOUS_LISTING_TERMS);
   const eventType = classifyEventType(blob);
 
   let musicScore = 0;
@@ -177,6 +189,16 @@ export function classifyEvent(event: LiveMusicEvent): ClassifiedEvent {
   if (looksLikeSoloPerson(title) && strongMusicMatches.length === 0 && mediumMusicMatches.length === 0) {
     musicScore -= 2;
     reasons.push("single-person title without music wording is ambiguous");
+  }
+
+  if (ambiguousListingMatches.length > 0 && strongMusicMatches.length === 0 && mediumMusicMatches.length === 0) {
+    musicScore -= 3;
+    reasons.push("listing title is generic and sparse");
+
+    if (event.venue === "The Royal Room" || event.sourceName === "The Royal Room") {
+      musicScore -= 2;
+      reasons.push("Royal Room listing needs stronger title evidence to rank confidently");
+    }
   }
 
   if (cautionMatches.length > 0) {

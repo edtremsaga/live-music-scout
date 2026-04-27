@@ -44,6 +44,13 @@ export type SourceConfig = {
   parser: string;
   location?: string;
   areaTags?: string[];
+  sourceType?: "venue" | "promoter" | "seasonal" | "seasonal_outdoor" | "large_venue";
+  musicOnly?: boolean;
+  seasonal?: boolean;
+  duplicateGroup?: string;
+  coveredVenues?: string[];
+  parserStatus?: "live" | "todo";
+  notes?: string;
 };
 
 export type Preferences = {

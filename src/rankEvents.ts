@@ -55,6 +55,10 @@ function addVenueAwareScoring(blob: string, matchReasons: string[]): number {
   return score;
 }
 
+function hasAny(text: string, terms: string[]): boolean {
+  return terms.some((term) => text.includes(term));
+}
+
 export function rankEvents(
   events: ClassifiedEvent[],
   preferences: Preferences,
@@ -139,6 +143,15 @@ export function rankEvents(
       if (blob.includes("dj")) {
         score -= 4;
         matchReasons.push("DJ-focused signal lowers the fit");
+      }
+
+      if (
+        blob.includes("the royal room")
+        && hasAny(blob, ["happy hour", "birthday bash", "workshop", "showcase", "launch", "circle", "sessions"])
+        && !hasAny(blob, ["album release", "trio", "quartet", "quintet", "ensemble", "orchestra", "concert", "jazz", "jam", "w/", "feat.", "with "])
+      ) {
+        score -= 4;
+        matchReasons.push("Royal Room listing is too sparse or generic to treat as a top pick");
       }
 
       if (
