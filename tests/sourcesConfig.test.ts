@@ -18,6 +18,7 @@ test("configured allowlist includes the new venue and seasonal sources", () => {
   assert.equal(names.has("Bake's Place"), true);
   assert.equal(names.has("The Triple Door"), true);
   assert.equal(names.has("Skylark Cafe"), true);
+  assert.equal(names.has("Tim's Tavern"), true);
   assert.equal(names.has("Remlinger Farms Summer Concerts"), true);
   assert.equal(names.has("Marymoor Park Concerts"), true);
   assert.equal(names.has("Chateau Ste. Michelle Summer Concerts"), true);
@@ -65,6 +66,18 @@ test("Nectar Lounge, Hidden Hall, and Skylark Cafe are configured as live parsed
   assert.equal(skylark.parser, "skylark");
   assert.equal(skylark.parserStatus, "live");
   assert.equal(skylark.musicOnly, true);
+});
+
+test("Tim's Tavern is configured as an honest TODO live-music venue source", () => {
+  const sources = loadSources();
+  const timsTavern = sources.find((source) => source.name === "Tim's Tavern");
+
+  assert.ok(timsTavern);
+  assert.equal(timsTavern.parser, "configuredTodo");
+  assert.equal(timsTavern.parserStatus, "todo");
+  assert.equal(timsTavern.sourceType, "venue");
+  assert.equal(timsTavern.musicOnly, true);
+  assert.match(timsTavern.notes ?? "", /Cloudflare challenge/i);
 });
 
 test("STG stays a promoter source and absorbs Neptune and Moore coverage without duplicate sources", () => {
