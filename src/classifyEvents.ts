@@ -51,6 +51,8 @@ const CAUTION_TERMS = [
   "novel",
   "book club",
   "workshop",
+  "audition",
+  "auditions",
   "class",
   "yoga",
   "actors",
@@ -73,6 +75,16 @@ const MEDIUM_MUSIC_TERMS = [
   "piano",
   "guitar",
   "duo"
+];
+
+const ROYAL_ROOM_MUSIC_TITLE_TERMS = [
+  "septet",
+  "sextet",
+  "songteller",
+  "songtellers",
+  "plays the music",
+  "returns to",
+  "benefit concert"
 ];
 
 const AMBIGUOUS_LISTING_TERMS = [
@@ -125,6 +137,18 @@ function looksLikeMultiActBill(title: string): boolean {
   return cleaned.includes(",") && cleaned.split(",").map((part) => part.trim()).filter(Boolean).length >= 2;
 }
 
+function looksLikeSpecificRoyalRoomMusicTitle(title: string): boolean {
+  const titleLower = title.toLowerCase();
+
+  if (ROYAL_ROOM_MUSIC_TITLE_TERMS.some((term) => titleLower.includes(term))) {
+    return true;
+  }
+
+  return !AMBIGUOUS_LISTING_TERMS.some((term) => titleLower.includes(term))
+    && !CAUTION_TERMS.some((term) => titleLower.includes(term))
+    && title.trim().split(/\s+/).length >= 2;
+}
+
 function classifyEventType(blob: string): EventClassification["eventType"] {
   if (blob.includes("comedy")) {
     return "comedy";
@@ -144,6 +168,9 @@ function classifyEventType(blob: string): EventClassification["eventType"] {
     || blob.includes("theater")
     || blob.includes("screening")
     || blob.includes("film")
+    || blob.includes("workshop")
+    || blob.includes("audition")
+    || blob.includes("yoga")
   ) {
     return "theater";
   }
@@ -163,6 +190,8 @@ export function classifyEvent(event: LiveMusicEvent): ClassifiedEvent {
   const mediumMusicMatches = countMatches(blob, MEDIUM_MUSIC_TERMS);
   const cautionMatches = countMatches(blob, CAUTION_TERMS);
   const ambiguousListingMatches = countMatches(titleLower, AMBIGUOUS_LISTING_TERMS);
+  const looksLikeSpecificRoyalRoomMusic = (event.venue === "The Royal Room" || event.sourceName === "The Royal Room")
+    && looksLikeSpecificRoyalRoomMusicTitle(title);
   const eventType = classifyEventType(blob);
 
   let musicScore = 0;
@@ -197,6 +226,11 @@ export function classifyEvent(event: LiveMusicEvent): ClassifiedEvent {
   if (event.venue === "The Royal Room" || event.sourceName === "The Royal Room") {
     musicScore += 3;
     reasons.push("The Royal Room is strongly music-oriented");
+
+    if (looksLikeSpecificRoyalRoomMusic) {
+      musicScore += 3;
+      reasons.push("Royal Room title looks like a specific music booking");
+    }
   }
 
   if (event.venue === "Dimitriou's Jazz Alley" || event.sourceName === "Dimitriou's Jazz Alley") {
@@ -239,7 +273,7 @@ export function classifyEvent(event: LiveMusicEvent): ClassifiedEvent {
     reasons.push("single-person title without music wording is ambiguous");
   }
 
-  if (ambiguousListingMatches.length > 0 && strongMusicMatches.length === 0 && mediumMusicMatches.length === 0) {
+  if (ambiguousListingMatches.length > 0 && strongMusicMatches.length === 0 && mediumMusicMatches.length === 0 && !looksLikeSpecificRoyalRoomMusic) {
     musicScore -= 3;
     reasons.push("listing title is generic and sparse");
 

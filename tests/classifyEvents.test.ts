@@ -133,3 +133,36 @@ test("Kerry Hall yoga/class style STG listing stays out of likely music", () => 
   const classified = classifyEvent(event);
   assert.equal(classified.classification.isLikelyMusic, false);
 });
+
+test("Kerry Hall workshop and audition STG listing stays out of likely music", () => {
+  const event = makeEvent({
+    title: "DANCE This Workshop + Auditions with THE OUTSIDERS",
+    venue: "Kerry Hall",
+    sourceName: "STG Presents",
+    url: "https://www.stgpresents.org/events/dance-this-workshop-auditions-with-the-outsiders/"
+  });
+
+  const classified = classifyEvent(event);
+  assert.equal(classified.classification.isLikelyMusic, false);
+  assert.equal(classified.classification.eventType, "theater");
+  assert.match(classified.classification.exclusionReason ?? "", /workshop/);
+});
+
+test("Royal Room specific music-looking titles classify as likely music", () => {
+  const titles = [
+    "Stillhouse Junkies",
+    "The Nate Omdal Septet plays the Music from “Star Wars”",
+    "Songtellers Circle: Queer Musical Magic & Medicine"
+  ];
+
+  for (const title of titles) {
+    const classified = classifyEvent(makeEvent({
+      title,
+      venue: "The Royal Room",
+      sourceName: "The Royal Room",
+      url: `https://theroyalroomseattle.com/event/${title.toLowerCase().replace(/\W+/g, "-")}/`
+    }));
+
+    assert.equal(classified.classification.isLikelyMusic, true, title);
+  }
+});

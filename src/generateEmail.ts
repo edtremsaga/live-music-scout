@@ -198,6 +198,10 @@ function buildSkipReason(event: RankedEvent): string {
     }
 
     if (event.classification.eventType === "theater" || event.classification.eventType === "dance") {
+      if (event.sourceName === "STG Presents" && /\b(workshop|audition|class|yoga)\b/i.test(event.classification.exclusionReason ?? blob)) {
+        return "workshop/audition, not this scout’s target";
+      }
+
       return event.sourceName === "STG Presents"
         ? "theater/ballet/film, not this scout’s target"
         : "probably not a live-music fit";

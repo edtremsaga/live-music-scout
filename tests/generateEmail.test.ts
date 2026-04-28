@@ -670,6 +670,49 @@ test("obvious STG non-music wording is specific", () => {
   assert.match(output, /Not highlighted: theater\/ballet\/film, not this scout’s target\./);
 });
 
+test("STG workshop and audition wording is specific", () => {
+  const highlighted = makeRankedEvent({
+    id: "highlighted",
+    title: "Clear Headliner",
+    artist: "Clear Headliner",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/highlighted",
+    date: "2026-04-26",
+    score: 30,
+    verdict: "Go"
+  });
+  const workshop = makeRankedEvent({
+    id: "stg-workshop",
+    title: "DANCE This Workshop + Auditions with THE OUTSIDERS",
+    artist: "DANCE This Workshop + Auditions with THE OUTSIDERS",
+    venue: "Kerry Hall",
+    sourceName: "STG Presents",
+    url: "https://www.stgpresents.org/events/dance-this-workshop-auditions-with-the-outsiders/",
+    date: "2026-04-30",
+    score: -3,
+    verdict: "Skip",
+    classification: {
+      isLikelyMusic: false,
+      musicConfidence: "High",
+      eventType: "theater",
+      fitReason: "fixture fit reason",
+      exclusionReason: "non-music signals: workshop, audition"
+    }
+  });
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-04-26T12:00:00-07:00"),
+    [highlighted, workshop],
+    "2026-04-26",
+    "2026-05-03"
+  );
+
+  assert.match(output, /Not highlighted: workshop\/audition, not this scout’s target\./);
+  assert.doesNotMatch(output, /DANCE This Workshop \+ Auditions[\s\S]*maybe — check a clip first/);
+});
+
+
 test("weekly preview uses music-fit wording for STG music acts outside the sweet spot", () => {
   const highlighted = makeRankedEvent({
     id: "highlighted",
