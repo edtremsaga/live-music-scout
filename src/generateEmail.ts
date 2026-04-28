@@ -1,4 +1,5 @@
 import { cleanDisplayText, formatDateKeyShort, formatDateKeyWeekday, formatDateRangeLong, formatTonightLong, getTimeOfDayNote } from "./dateUtils.js";
+import { getEventStatusIssueReason, hasEventStatusIssue } from "./eventStatus.js";
 import type { RankedEvent } from "./types.js";
 
 type WeeklyHighlightGroup = {
@@ -23,6 +24,40 @@ function escapeHtml(value: string): string {
 
 function publicText(value: string | undefined): string {
   return cleanDisplayText(value);
+}
+
+function getEventTextBlob(event: Pick<RankedEvent, "title" | "artist" | "venue" | "description" | "genreHints" | "sourceName">): string {
+  return [
+    publicText(event.title),
+    publicText(event.artist),
+    publicText(event.venue),
+    publicText(event.description),
+    event.genreHints.join(" "),
+    publicText(event.sourceName)
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function isRecurringJamNight(event: RankedEvent): boolean {
+  const blob = getEventTextBlob(event);
+  return blob.includes("jam") && (blob.includes("mondays") || blob.includes("weekly") || blob.includes("recurring"));
+}
+
+function isLocalBandBill(event: RankedEvent): boolean {
+  const blob = getEventTextBlob(event);
+  const title = publicText(event.artist ?? event.title);
+  return (
+    (event.sourceName === "Skylark Cafe" || event.sourceName === "Hidden Hall" || event.sourceName === "Nectar Lounge")
+    && (title.includes(",") || /\bw\/\b/i.test(title) || /\bwith\b/i.test(title))
+    && !blob.includes("dj ")
+  );
+}
+
+function isMixedFormatPerformance(event: RankedEvent): boolean {
+  const blob = getEventTextBlob(event);
+  return blob.includes("dina martina");
 }
 
 export function getSourceLinkLabel(event: Pick<RankedEvent, "url" | "sourceName" | "venue">): string {
@@ -144,6 +179,13 @@ function buildWhyLine(event: RankedEvent): string {
 }
 
 function buildSkipReason(event: RankedEvent): string {
+  const statusIssueReason = getEventStatusIssueReason(event);
+  if (statusIssueReason) {
+    return statusIssueReason;
+  }
+
+  const blob = getEventTextBlob(event);
+
   if (!event.classification.isLikelyMusic) {
     if (event.sourceName === "The Royal Room" && event.classification.eventType === "unknown") {
       return "unclear from listing — check details if the title interests you";
@@ -165,14 +207,54 @@ function buildSkipReason(event: RankedEvent): string {
       return "possible music event, but the listing is too sparse to rank confidently";
     }
 
+    if (isMixedFormatPerformance(event)) {
+      return "mixed-format performance — not this scout’s main music target";
+    }
+
+    if (
+      event.sourceName === "Nectar Lounge"
+      || event.sourceName === "Hidden Hall"
+      || event.sourceName === "Skylark Cafe"
+      || event.sourceName === "Bake's Place"
+      || event.sourceName === "The Triple Door"
+    ) {
+      return isLocalBandBill(event)
+        ? "local-band listing — check a clip first"
+        : "possible music event, but the listing is too sparse to rank confidently";
+    }
+
     return "probably not a live-music fit";
   }
 
-  if (event.sourceName === "STG Presents") {
-    return "likely music, but not a strong fit for this scout";
+  if (isRecurringJamNight(event)) {
+    return "recurring jam night — real music, but not one of the top weekly picks";
   }
 
-  return "not as strong as the better options tonight";
+  if (isMixedFormatPerformance(event)) {
+    return "mixed-format performance — not this scout’s main music target";
+  }
+
+  if (event.sourceName === "STG Presents") {
+    return hasHarderEdgeCue(blob)
+      ? "live music, but probably outside your usual sweet spot"
+      : "music event, but not as strong as the better options this week";
+  }
+
+  if (
+    event.sourceName === "Nectar Lounge"
+    || event.sourceName === "Hidden Hall"
+    || event.sourceName === "Skylark Cafe"
+  ) {
+    return isLocalBandBill(event)
+      ? "local-band listing — check a clip first"
+      : "music event, but not as strong as the better options this week";
+  }
+
+  return "music event, but not as strong as the better options this week";
+}
+
+function hasHarderEdgeCue(blob: string): boolean {
+  return ["metal", "hardcore", "deathcore", "thrash", "punk", "heavy", "helloween"].some((term) => blob.includes(term));
 }
 
 function getAvailabilityLine(event: RankedEvent): string | undefined {
@@ -258,6 +340,7 @@ function selectEmailSections(rankedEvents: RankedEvent[]): {
       (event) =>
         (event.verdict === "Go" || event.verdict === "Maybe")
         && event.classification.isLikelyMusic
+        && !hasEventStatusIssue(event)
       )
     .slice(0, 5);
   const noStrongMatches = highlights.length === 0;
@@ -271,7 +354,9 @@ function renderEvaluatedItem(event: RankedEvent): string {
   const venue = publicText(event.venue);
   const timePart = event.time ? ` — ${event.time}` : "";
   const reason =
-    event.verdict === "Maybe"
+    hasEventStatusIssue(event)
+      ? `Not highlighted: ${buildSkipReason(event)}.`
+      : event.verdict === "Maybe"
       ? "Highlight-worthy, but a lighter fit than the top picks."
       : event.verdict === "Go"
         ? "Strong fit, but already covered in the highlights."
@@ -285,7 +370,9 @@ function renderEvaluatedItemHtml(event: RankedEvent): string {
   const venue = publicText(event.venue);
   const timePart = event.time ? ` — ${event.time}` : "";
   const reason =
-    event.verdict === "Maybe"
+    hasEventStatusIssue(event)
+      ? `Not highlighted: ${buildSkipReason(event)}.`
+      : event.verdict === "Maybe"
       ? "Highlight-worthy, but a lighter fit than the top picks."
       : event.verdict === "Go"
         ? "Strong fit, but already covered in the highlights."
@@ -315,6 +402,18 @@ function formatWeeklyDateList(dateKeys: string[]): string {
   return dateKeys.map((dateKey) => formatDateKeyShort(dateKey)).join(", ");
 }
 
+function formatWeeklyDateLabel(dateKeys: string[]): string {
+  return dateKeys.length === 1
+    ? `Date: ${formatWeeklyDateList(dateKeys)}`
+    : `Dates: ${formatWeeklyDateList(dateKeys)}`;
+}
+
+function formatWeeklyDateLabelHtml(dateKeys: string[]): string {
+  return dateKeys.length === 1
+    ? `<li><strong>Date:</strong> ${escapeHtml(formatWeeklyDateList(dateKeys))}</li>`
+    : `<li><strong>Dates:</strong> ${escapeHtml(formatWeeklyDateList(dateKeys))}</li>`;
+}
+
 function formatWeeklyTimes(events: RankedEvent[]): string | undefined {
   const times = Array.from(
     new Set(
@@ -333,6 +432,10 @@ function cleanGroupedHighlightDisplayTitle(value: string): string {
     .replace(/\s+\b(BOTH SHOWS|NIGHT ONE|NIGHT TWO|Night 1|Night 2)\b/gi, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function isAggregateMultiNightListing(event: RankedEvent): boolean {
+  return /\bBOTH SHOWS\b/i.test(publicText(event.artist ?? event.title));
 }
 
 function getWeeklyHighlightGroupScore(group: WeeklyHighlightGroup): number {
@@ -367,10 +470,6 @@ function buildWeeklyGroupTake(group: WeeklyHighlightGroup): string {
 }
 
 function renderWeeklyHighlight(group: WeeklyHighlightGroup): string {
-  if (group.events.length === 1) {
-    return renderHighlight(group.representative);
-  }
-
   const representative = group.representative;
   const title = cleanGroupedHighlightDisplayTitle(representative.artist ?? representative.title);
   const venue = publicText(representative.venue);
@@ -382,8 +481,8 @@ function renderWeeklyHighlight(group: WeeklyHighlightGroup): string {
   return [
     `### ${title}`,
     `- Venue: ${venue}`,
-    `- Dates: ${formatWeeklyDateList(dates)}`,
-    times ? `- Times: ${times}` : undefined,
+    `- ${formatWeeklyDateLabel(dates)}`,
+    times ? `- ${dates.length === 1 ? "Time" : "Times"}: ${times}` : undefined,
     `- Location: ${location}`,
     availability ? `- Availability: ${availability}` : undefined,
     `- Why it looks good: ${publicText(buildWhyLine(representative))}`,
@@ -395,10 +494,6 @@ function renderWeeklyHighlight(group: WeeklyHighlightGroup): string {
 }
 
 function renderWeeklyHighlightHtml(group: WeeklyHighlightGroup): string {
-  if (group.events.length === 1) {
-    return renderHighlightHtml(group.representative);
-  }
-
   const representative = group.representative;
   const title = cleanGroupedHighlightDisplayTitle(representative.artist ?? representative.title);
   const venue = publicText(representative.venue);
@@ -411,8 +506,8 @@ function renderWeeklyHighlightHtml(group: WeeklyHighlightGroup): string {
     `<h3>${escapeHtml(title)}</h3>`,
     "<ul>",
     `<li><strong>Venue:</strong> ${escapeHtml(venue)}</li>`,
-    `<li><strong>Dates:</strong> ${escapeHtml(formatWeeklyDateList(dates))}</li>`,
-    times ? `<li><strong>Times:</strong> ${escapeHtml(times)}</li>` : undefined,
+    formatWeeklyDateLabelHtml(dates),
+    times ? `<li><strong>${dates.length === 1 ? "Time" : "Times"}:</strong> ${escapeHtml(times)}</li>` : undefined,
     `<li><strong>Location:</strong> ${escapeHtml(location)}</li>`,
     availability ? `<li><strong>Availability:</strong> ${escapeHtml(availability)}</li>` : undefined,
     `<li><strong>Why it looks good:</strong> ${escapeHtml(publicText(buildWhyLine(representative)))}</li>`,
@@ -434,6 +529,9 @@ function selectWeeklyEmailSections(rankedEvents: RankedEvent[]): {
       (event) =>
         (event.verdict === "Go" || event.verdict === "Maybe")
         && event.classification.isLikelyMusic
+        && !hasEventStatusIssue(event)
+        && (!isRecurringJamNight(event) || event.score >= 12)
+        && (!isMixedFormatPerformance(event) || event.score >= 12)
     );
   const groupedHighlights = new Map<string, WeeklyHighlightGroup>();
 
@@ -502,8 +600,17 @@ function selectWeeklyEmailSections(rankedEvents: RankedEvent[]): {
 
   const highlightIds = new Set(highlights.flatMap((group) => group.events.map((event) => event.id)));
   const evaluatedByDay = new Map<string, RankedEvent[]>();
+  const aggregateMultiNightKeysWithNightlyEntries = new Set(
+    rankedEvents
+      .filter((event) => !isAggregateMultiNightListing(event) && /\bNIGHT (?:ONE|TWO|1|2)\b/i.test(publicText(event.artist ?? event.title)))
+      .map((event) => getWeeklyHighlightKey(event))
+  );
 
   for (const event of rankedEvents) {
+    if (isAggregateMultiNightListing(event) && aggregateMultiNightKeysWithNightlyEntries.has(getWeeklyHighlightKey(event))) {
+      continue;
+    }
+
     const existing = evaluatedByDay.get(event.date) ?? [];
     existing.push(event);
     evaluatedByDay.set(event.date, existing);
@@ -513,35 +620,63 @@ function selectWeeklyEmailSections(rankedEvents: RankedEvent[]): {
 }
 
 function renderWeeklyEvaluatedItem(event: RankedEvent, isHighlighted: boolean): string {
+  const reason = getWeeklyEvaluatedReason(event, isHighlighted);
   const title = publicText(event.artist ?? event.title);
   const venue = publicText(event.venue);
   const timePart = event.time ? ` — ${event.time}` : "";
-  const reason =
-    isHighlighted
-      ? "Highlighted above."
-      : event.verdict === "Maybe"
-      ? "Not highlighted: maybe — check a clip first."
-      : event.verdict === "Go"
-        ? "Not highlighted: good fit, but not one of the top weekly picks."
-        : `Not highlighted: ${buildSkipReason(event)}.`;
 
   return `- ${title} — ${venue}${timePart} — ${publicText(reason)} ${formatSourceLinkMarkdown(event)}`;
 }
 
 function renderWeeklyEvaluatedItemHtml(event: RankedEvent, isHighlighted: boolean): string {
+  const reason = getWeeklyEvaluatedReason(event, isHighlighted);
   const title = publicText(event.artist ?? event.title);
   const venue = publicText(event.venue);
   const timePart = event.time ? ` — ${event.time}` : "";
-  const reason =
-    isHighlighted
-      ? "Highlighted above."
-      : event.verdict === "Maybe"
-      ? "Not highlighted: maybe — check a clip first."
-      : event.verdict === "Go"
-        ? "Not highlighted: good fit, but not one of the top weekly picks."
-        : `Not highlighted: ${buildSkipReason(event)}.`;
 
   return `<li>${escapeHtml(title)} — ${escapeHtml(venue)}${escapeHtml(timePart)} — ${escapeHtml(publicText(reason))} ${formatSourceLinkHtml(event)}</li>`;
+}
+
+function getWeeklyEvaluatedReason(event: RankedEvent, isHighlighted: boolean): string {
+  if (isHighlighted) {
+    return "Highlighted above.";
+  }
+
+  if (hasEventStatusIssue(event)) {
+    return `Not highlighted: ${buildSkipReason(event)}.`;
+  }
+
+  if (isRecurringJamNight(event)) {
+    return "Not highlighted: recurring jam night — real music, but not one of the top weekly picks.";
+  }
+
+  if (isMixedFormatPerformance(event)) {
+    return "Not highlighted: mixed-format performance — not this scout’s main music target.";
+  }
+
+  if (isLocalBandBill(event) && event.verdict !== "Go") {
+    return "Not highlighted: local-band listing — check a clip first.";
+  }
+
+  const skipReason = buildSkipReason(event);
+
+  if (event.verdict === "Maybe") {
+    if (skipReason === "live music, but probably outside your usual sweet spot") {
+      return "Not highlighted: live music, but probably outside your usual sweet spot.";
+    }
+
+    if (skipReason === "music event, but not as strong as the better options this week") {
+      return "Not highlighted: maybe — check a clip first.";
+    }
+
+    return `Not highlighted: ${skipReason}.`;
+  }
+
+  if (event.verdict === "Go") {
+    return "Not highlighted: good fit, but not one of the top weekly picks.";
+  }
+
+  return `Not highlighted: ${skipReason}.`;
 }
 
 export function generateEmailPreview(now: Date, rankedEvents: RankedEvent[]): string {

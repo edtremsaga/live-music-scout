@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   generateEmailHtml,
   generateEmailPreview,
+  generateWeeklyEmailHtml,
   generateWeeklyEmailPreview,
   getSourceLinkLabel
 } from "../src/generateEmail.js";
@@ -232,6 +233,113 @@ test("weekly preview dedupes repeated multi-night highlights but keeps dated eve
   assert.match(output, /- Dates: Thu, Apr 30, Fri, May 1/);
   assert.match(output, /### Thursday, April 30[\s\S]*Highlighted above\./);
   assert.match(output, /### Friday, May 1[\s\S]*Highlighted above\./);
+});
+
+test("single-date weekly highlights show date and time in markdown and html", () => {
+  const jessie = makeRankedEvent({
+    id: "jessie",
+    title: "Jessie Thoreson & The Crown Fire (album release) w/ Kate Dinsmore",
+    artist: "Jessie Thoreson & The Crown Fire (album release) w/ Kate Dinsmore",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/jessie",
+    date: "2026-04-30",
+    time: "7:30 PM",
+    score: 20,
+    verdict: "Go"
+  });
+
+  const preview = generateWeeklyEmailPreview(
+    new Date("2026-04-26T12:00:00-07:00"),
+    [jessie],
+    "2026-04-26",
+    "2026-05-03"
+  );
+  const html = generateWeeklyEmailHtml(
+    new Date("2026-04-26T12:00:00-07:00"),
+    [jessie],
+    "2026-04-26",
+    "2026-05-03"
+  );
+
+  assert.match(preview, /### Jessie Thoreson & The Crown Fire \(album release\) w\/ Kate Dinsmore\n- Venue: Tractor Tavern\n- Date: Thu, Apr 30\n- Time: 7:30 PM/);
+  assert.match(html, /<li><strong>Date:<\/strong> Thu, Apr 30<\/li><li><strong>Time:<\/strong> 7:30 PM<\/li>/);
+});
+
+test("weekly evaluated shows suppress BOTH SHOWS aggregate when nightly entries exist", () => {
+  const bothShows = makeRankedEvent({
+    id: "vincent-both",
+    title: "KEXP's Roadhouse Presents: Vincent Neil Emerson w/ Kade Hoffman BOTH SHOWS",
+    artist: "KEXP's Roadhouse Presents: Vincent Neil Emerson w/ Kade Hoffman BOTH SHOWS",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/both-shows",
+    date: "2026-05-01",
+    time: "8:30 PM",
+    score: 25,
+    verdict: "Go"
+  });
+  const nightOne = makeRankedEvent({
+    id: "vincent-night-one",
+    title: "KEXP's Roadhouse Presents: Vincent Neil Emerson w/ Kade Hoffman NIGHT ONE",
+    artist: "KEXP's Roadhouse Presents: Vincent Neil Emerson w/ Kade Hoffman NIGHT ONE",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/night-one",
+    date: "2026-05-01",
+    time: "8:30 PM",
+    score: 24,
+    verdict: "Go"
+  });
+  const nightTwo = makeRankedEvent({
+    id: "vincent-night-two",
+    title: "KEXP's Roadhouse Presents: Vincent Neil Emerson w/ Kade Hoffman NIGHT TWO",
+    artist: "KEXP's Roadhouse Presents: Vincent Neil Emerson w/ Kade Hoffman NIGHT TWO",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/night-two",
+    date: "2026-05-02",
+    time: "8:30 PM",
+    score: 23,
+    verdict: "Go"
+  });
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-04-26T12:00:00-07:00"),
+    [bothShows, nightOne, nightTwo],
+    "2026-04-26",
+    "2026-05-03"
+  );
+
+  assert.match(output, /### KEXP's Roadhouse Presents: Vincent Neil Emerson w\/ Kade Hoffman/);
+  assert.match(output, /- Dates: Fri, May 1, Sat, May 2/);
+  assert.doesNotMatch(output, /### Friday, May 1[\s\S]*BOTH SHOWS/);
+  assert.match(output, /### Friday, May 1[\s\S]*NIGHT ONE[\s\S]*Highlighted above\./);
+  assert.match(output, /### Saturday, May 2[\s\S]*NIGHT TWO[\s\S]*Highlighted above\./);
+});
+
+test("weekly evaluated shows keep BOTH SHOWS listing when no nightly entries exist", () => {
+  const bothShows = makeRankedEvent({
+    id: "vincent-both-only",
+    title: "KEXP's Roadhouse Presents: Vincent Neil Emerson w/ Kade Hoffman BOTH SHOWS",
+    artist: "KEXP's Roadhouse Presents: Vincent Neil Emerson w/ Kade Hoffman BOTH SHOWS",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/both-shows",
+    date: "2026-05-01",
+    time: "8:30 PM",
+    score: 25,
+    verdict: "Go"
+  });
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-04-26T12:00:00-07:00"),
+    [bothShows],
+    "2026-04-26",
+    "2026-05-03"
+  );
+
+  assert.match(output, /### Friday, May 1[\s\S]*BOTH SHOWS[\s\S]*Highlighted above\./);
 });
 
 test("weekly highlights apply a light venue diversity cap when alternatives exist", () => {
@@ -562,6 +670,211 @@ test("obvious STG non-music wording is specific", () => {
   assert.match(output, /Not highlighted: theater\/ballet\/film, not this scout’s target\./);
 });
 
+test("weekly preview uses music-fit wording for STG music acts outside the sweet spot", () => {
+  const highlighted = makeRankedEvent({
+    id: "highlighted",
+    title: "Clear Headliner",
+    artist: "Clear Headliner",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/highlighted",
+    date: "2026-04-26",
+    score: 30,
+    verdict: "Go"
+  });
+  const helloween = makeRankedEvent({
+    id: "helloween",
+    title: "Helloween",
+    artist: "Helloween",
+    venue: "The Paramount Theatre",
+    sourceName: "STG Presents",
+    url: "https://www.stgpresents.org/events/helloween/",
+    date: "2026-04-28",
+    score: 1,
+    verdict: "Skip",
+    genreHints: ["touring act", "larger venue", "metal"],
+    classification: {
+      isLikelyMusic: true,
+      musicConfidence: "Medium",
+      eventType: "music",
+      fitReason: "fixture fit reason"
+    }
+  });
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-04-26T12:00:00-07:00"),
+    [highlighted, helloween],
+    "2026-04-26",
+    "2026-05-03"
+  );
+
+  assert.match(output, /Not highlighted: live music, but probably outside your usual sweet spot\./);
+  assert.doesNotMatch(output, /Helloween[\s\S]*probably not a live-music fit/);
+});
+
+test("weekly preview uses softer wording for likely-music Nectar listings", () => {
+  const highlighted = makeRankedEvent({
+    id: "highlighted",
+    title: "Clear Headliner",
+    artist: "Clear Headliner",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/highlighted",
+    date: "2026-04-26",
+    score: 30,
+    verdict: "Go"
+  });
+  const jamMondays = makeRankedEvent({
+    id: "jam-mondays",
+    title: "Mo' Jam Mondays",
+    artist: "Mo' Jam Mondays",
+    venue: "Nectar Lounge",
+    sourceName: "Nectar Lounge",
+    url: "https://www.tixr.com/groups/nectarlounge/events/mo-jam-mondays-186268",
+    date: "2026-04-27",
+    score: 1,
+    verdict: "Skip",
+    classification: {
+      isLikelyMusic: true,
+      musicConfidence: "Medium",
+      eventType: "music",
+      fitReason: "fixture fit reason"
+    }
+  });
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-04-26T12:00:00-07:00"),
+    [highlighted, jamMondays],
+    "2026-04-26",
+    "2026-05-03"
+  );
+
+  assert.match(output, /Not highlighted: recurring jam night — real music, but not one of the top weekly picks\./);
+  assert.doesNotMatch(output, /Mo' Jam Mondays[\s\S]*probably not a live-music fit/);
+});
+
+test("weekly preview uses local-band wording for non-highlighted Skylark listings", () => {
+  const highlighted = makeRankedEvent({
+    id: "highlighted",
+    title: "Clear Headliner",
+    artist: "Clear Headliner",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/highlighted",
+    date: "2026-04-26",
+    score: 30,
+    verdict: "Go"
+  });
+  const skylarkListing = makeRankedEvent({
+    id: "skylark-band-bill",
+    title: "Swinson, The Rolling Thunder, Will Rainier & the Pines",
+    artist: "Swinson, The Rolling Thunder, Will Rainier & the Pines",
+    venue: "Skylark Cafe",
+    sourceName: "Skylark Cafe",
+    url: "https://www.skylarkcafe.com/global-events/swinson-the-rolling-thunder-will-rainier-the-pines",
+    date: "2026-05-01",
+    score: 1,
+    verdict: "Skip",
+    classification: {
+      isLikelyMusic: true,
+      musicConfidence: "Medium",
+      eventType: "music",
+      fitReason: "fixture fit reason"
+    }
+  });
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-04-26T12:00:00-07:00"),
+    [highlighted, skylarkListing],
+    "2026-04-26",
+    "2026-05-03"
+  );
+
+  assert.match(output, /Not highlighted: local-band listing — check a clip first\./);
+  assert.doesNotMatch(output, /Swinson, The Rolling Thunder, Will Rainier & the Pines[\s\S]*probably not a live-music fit/);
+});
+
+test("weekly preview uses mixed-format wording for Dina Martina", () => {
+  const highlighted = makeRankedEvent({
+    id: "highlighted",
+    title: "Clear Headliner",
+    artist: "Clear Headliner",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/highlighted",
+    date: "2026-04-26",
+    score: 30,
+    verdict: "Go"
+  });
+  const dina = makeRankedEvent({
+    id: "dina-martina",
+    title: "Dina Martina",
+    artist: "Dina Martina",
+    venue: "The Triple Door",
+    sourceName: "The Triple Door",
+    url: "https://thetripledoor.net/event/6347358/744005898/dina-martina",
+    date: "2026-04-29",
+    score: 2,
+    verdict: "Skip",
+    classification: {
+      isLikelyMusic: true,
+      musicConfidence: "Medium",
+      eventType: "music",
+      fitReason: "fixture fit reason"
+    }
+  });
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-04-26T12:00:00-07:00"),
+    [highlighted, dina],
+    "2026-04-26",
+    "2026-05-03"
+  );
+
+  assert.match(output, /Not highlighted: mixed-format performance — not this scout’s main music target\./);
+});
+
+test("recurring jam nights do not become weekly highlights by default", () => {
+  const jamMondays = makeRankedEvent({
+    id: "jam-mondays",
+    title: "Mo' Jam Mondays",
+    artist: "Mo' Jam Mondays",
+    venue: "Nectar Lounge",
+    sourceName: "Nectar Lounge",
+    url: "https://www.tixr.com/groups/nectarlounge/events/mo-jam-mondays-186268",
+    date: "2026-04-27",
+    score: 9,
+    verdict: "Go",
+    classification: {
+      isLikelyMusic: true,
+      musicConfidence: "High",
+      eventType: "music",
+      fitReason: "fixture fit reason"
+    }
+  });
+  const stronger = makeRankedEvent({
+    id: "stronger",
+    title: "Jessie Thoreson & The Crown Fire",
+    artist: "Jessie Thoreson & The Crown Fire",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/stronger",
+    date: "2026-04-30",
+    score: 20,
+    verdict: "Go"
+  });
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-04-26T12:00:00-07:00"),
+    [jamMondays, stronger],
+    "2026-04-26",
+    "2026-05-03"
+  );
+
+  assert.doesNotMatch(output, /## This Week’s Highlights[\s\S]*### Mo' Jam Mondays/);
+  assert.match(output, /Mo' Jam Mondays — Nectar Lounge[\s\S]*Not highlighted: recurring jam night — real music, but not one of the top weekly picks\./);
+});
+
 test("weekly preview does not merge unrelated shows that share generic words", () => {
   const first = makeRankedEvent({
     id: "first-album-release",
@@ -595,6 +908,137 @@ test("weekly preview does not merge unrelated shows that share generic words", (
 
   assert.match(output, /### Jessie Thoreson & The Crown Fire \(album release\) w\/ Kate Dinsmore/);
   assert.match(output, /### Som da Massa Album Release/);
+});
+
+test("postponed events cannot become weekly highlights and get status-aware wording", () => {
+  const strongWeeklyPick = makeRankedEvent({
+    id: "stronger",
+    title: "Vincent Neil Emerson",
+    artist: "Vincent Neil Emerson",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/stronger",
+    date: "2026-05-01",
+    score: 20,
+    verdict: "Go"
+  });
+  const postponed = makeRankedEvent({
+    id: "vnv-postponed",
+    title: "VNV Nation – Postponed",
+    artist: "VNV Nation – Postponed",
+    venue: "The Neptune Theatre",
+    sourceName: "STG Presents",
+    url: "https://www.stgpresents.org/events/vnv-nation/",
+    date: "2026-04-29",
+    score: 18,
+    verdict: "Go",
+    classification: {
+      isLikelyMusic: true,
+      musicConfidence: "High",
+      eventType: "music",
+      fitReason: "fixture fit reason"
+    }
+  });
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-04-26T12:00:00-07:00"),
+    [postponed, strongWeeklyPick],
+    "2026-04-26",
+    "2026-05-03"
+  );
+
+  assert.doesNotMatch(output, /## This Week’s Highlights[\s\S]*### VNV Nation – Postponed/);
+  assert.match(output, /VNV Nation – Postponed[\s\S]*Not highlighted: postponed\/rescheduled — check the source for current status\./);
+  assert.doesNotMatch(output, /VNV Nation – Postponed[\s\S]*maybe — check a clip first/);
+});
+
+test("cancelled or rescheduled events get status-aware wording in nightly preview", () => {
+  const highlighted = makeRankedEvent({
+    id: "highlighted",
+    title: "Clear Headliner",
+    artist: "Clear Headliner",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/highlighted",
+    date: "2026-04-27",
+    score: 30,
+    verdict: "Go"
+  });
+  const cancelled = makeRankedEvent({
+    id: "cancelled",
+    title: "Artist Name – Cancelled",
+    artist: "Artist Name – Cancelled",
+    venue: "Nectar Lounge",
+    sourceName: "Nectar Lounge",
+    url: "https://www.tixr.com/groups/nectarlounge/events/cancelled",
+    date: "2026-04-27",
+    score: 12,
+    verdict: "Maybe",
+    classification: {
+      isLikelyMusic: true,
+      musicConfidence: "High",
+      eventType: "music",
+      fitReason: "fixture fit reason"
+    }
+  });
+  const rescheduled = makeRankedEvent({
+    id: "rescheduled",
+    title: "Artist Name – Rescheduled",
+    artist: "Artist Name – Rescheduled",
+    venue: "Skylark Cafe",
+    sourceName: "Skylark Cafe",
+    url: "https://www.skylarkcafe.com/global-events/rescheduled",
+    date: "2026-04-27",
+    score: 12,
+    verdict: "Go",
+    classification: {
+      isLikelyMusic: true,
+      musicConfidence: "High",
+      eventType: "music",
+      fitReason: "fixture fit reason"
+    }
+  });
+
+  const output = generateEmailPreview(
+    new Date("2026-04-27T18:00:00-07:00"),
+    [highlighted, cancelled, rescheduled]
+  );
+
+  assert.doesNotMatch(output, /## Tonight’s Highlights[\s\S]*### Artist Name – Cancelled/);
+  assert.doesNotMatch(output, /## Tonight’s Highlights[\s\S]*### Artist Name – Rescheduled/);
+  assert.match(output, /Artist Name – Cancelled[\s\S]*Not highlighted: postponed\/rescheduled — check the source for current status\./);
+  assert.match(output, /Artist Name – Rescheduled[\s\S]*Not highlighted: postponed\/rescheduled — check the source for current status\./);
+});
+
+test("valid events stay highlight-eligible even if description mentions a past reschedule", () => {
+  const valid = makeRankedEvent({
+    id: "valid-event",
+    title: "Normal Tour Stop",
+    artist: "Normal Tour Stop",
+    venue: "The Neptune Theatre",
+    sourceName: "STG Presents",
+    url: "https://www.stgpresents.org/events/normal-tour-stop/",
+    date: "2026-04-29",
+    score: 18,
+    verdict: "Go",
+    description: "Originally rescheduled from last year, now confirmed for April 29.",
+    classification: {
+      isLikelyMusic: true,
+      musicConfidence: "High",
+      eventType: "music",
+      fitReason: "fixture fit reason"
+    }
+  });
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-04-26T12:00:00-07:00"),
+    [valid],
+    "2026-04-26",
+    "2026-05-03"
+  );
+
+  assert.match(output, /## This Week’s Highlights[\s\S]*### Normal Tour Stop/);
+  assert.doesNotMatch(output, /postponed\/rescheduled — check the source for current status/);
 });
 
 test("display text decodes HTML entities without changing URLs", () => {
