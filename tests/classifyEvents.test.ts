@@ -81,3 +81,55 @@ test("Drew and Ellie Holcomb classifies as music", () => {
   const classified = classifyEvent(event);
   assert.equal(classified.classification.isLikelyMusic, true);
 });
+
+test("Mo' Jam Mondays classifies as music rather than non-music", () => {
+  const event = makeEvent({
+    title: "Mo' Jam Mondays",
+    venue: "Nectar Lounge",
+    sourceName: "Nectar Lounge",
+    url: "https://www.tixr.com/groups/nectarlounge/events/mo-jam-mondays-186268"
+  });
+
+  const classified = classifyEvent(event);
+  assert.equal(classified.classification.isLikelyMusic, true);
+  assert.equal(classified.classification.eventType, "music");
+});
+
+test("Helloween classifies as music rather than non-music", () => {
+  const event = makeEvent({
+    title: "Helloween",
+    venue: "The Paramount Theatre",
+    sourceName: "STG Presents",
+    genreHints: ["touring act", "larger venue"],
+    url: "https://www.stgpresents.org/events/helloween/"
+  });
+
+  const classified = classifyEvent(event);
+  assert.equal(classified.classification.isLikelyMusic, true);
+  assert.equal(classified.classification.eventType, "music");
+});
+
+test("Skylark multi-band listing classifies as music", () => {
+  const event = makeEvent({
+    title: "Swinson, The Rolling Thunder, Will Rainier & the Pines",
+    venue: "Skylark Cafe",
+    sourceName: "Skylark Cafe",
+    url: "https://www.skylarkcafe.com/global-events/swinson-the-rolling-thunder-will-rainier-the-pines"
+  });
+
+  const classified = classifyEvent(event);
+  assert.equal(classified.classification.isLikelyMusic, true);
+  assert.equal(classified.classification.eventType, "music");
+});
+
+test("Kerry Hall yoga/class style STG listing stays out of likely music", () => {
+  const event = makeEvent({
+    title: "Yoga en Español con Karla Mora Repeating Event",
+    venue: "Kerry Hall",
+    sourceName: "STG Presents",
+    url: "https://www.stgpresents.org/events/yoga-en-espanol-con-karla-mora-spring-2026/"
+  });
+
+  const classified = classifyEvent(event);
+  assert.equal(classified.classification.isLikelyMusic, false);
+});

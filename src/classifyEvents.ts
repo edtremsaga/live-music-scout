@@ -31,9 +31,12 @@ const CAUTION_TERMS = [
   "lecture",
   "talk",
   "conversation",
+  "repeating event",
   "author",
   "screening",
   "film",
+  "movie",
+  "silent movie",
   "drag brunch",
   "burlesque",
   "trivia",
@@ -49,6 +52,11 @@ const CAUTION_TERMS = [
   "book club",
   "workshop",
   "class",
+  "yoga",
+  "actors",
+  "acting",
+  "non-singers",
+  "musical theatre",
   "family",
   "kids"
 ];
@@ -60,6 +68,7 @@ const MEDIUM_MUSIC_TERMS = [
   "feat.",
   "with ",
   "tour",
+  "touring act",
   "strings",
   "piano",
   "guitar",
@@ -105,6 +114,15 @@ function looksLikeNamedAct(title: string): boolean {
     || /\bwith\b/i.test(title)
     || /\b(trio|quartet|quintet|ensemble|orchestra|band|duo)\b/i.test(title)
     || /album release/i.test(title);
+}
+
+function looksLikeMultiActBill(title: string): boolean {
+  const cleaned = title
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/[“”"'’‘]/g, "")
+    .trim();
+
+  return cleaned.includes(",") && cleaned.split(",").map((part) => part.trim()).filter(Boolean).length >= 2;
 }
 
 function classifyEventType(blob: string): EventClassification["eventType"] {
@@ -166,6 +184,11 @@ export function classifyEvent(event: LiveMusicEvent): ClassifiedEvent {
     reasons.push("title pattern looks like a bandleader or support-bill listing");
   }
 
+  if (looksLikeMultiActBill(title)) {
+    musicScore += 2;
+    reasons.push("title pattern looks like a multi-act bill");
+  }
+
   if (event.venue === "Tractor Tavern" || event.sourceName === "Tractor Tavern") {
     musicScore += 4;
     reasons.push("Tractor Tavern is a strong live-music source");
@@ -182,8 +205,33 @@ export function classifyEvent(event: LiveMusicEvent): ClassifiedEvent {
   }
 
   if (event.sourceName === "STG Presents") {
-    musicScore += 1;
+    musicScore += 2;
     reasons.push("STG can include music, but it needs stronger title signals");
+  }
+
+  if (event.venue === "Nectar Lounge" || event.sourceName === "Nectar Lounge") {
+    musicScore += 3;
+    reasons.push("Nectar Lounge is a credible live-music source");
+  }
+
+  if (event.venue === "Hidden Hall" || event.sourceName === "Hidden Hall") {
+    musicScore += 3;
+    reasons.push("Hidden Hall is a credible live-music source");
+  }
+
+  if (event.venue === "Skylark Cafe" || event.sourceName === "Skylark Cafe") {
+    musicScore += 3;
+    reasons.push("Skylark Cafe is a credible local-band source");
+  }
+
+  if (event.venue === "Bake's Place" || event.sourceName === "Bake's Place") {
+    musicScore += 3;
+    reasons.push("Bake's Place is a credible listening-room music source");
+  }
+
+  if (event.venue === "The Triple Door" || event.sourceName === "The Triple Door") {
+    musicScore += 2;
+    reasons.push("The Triple Door is a credible listening-room music source");
   }
 
   if (looksLikeSoloPerson(title) && strongMusicMatches.length === 0 && mediumMusicMatches.length === 0) {

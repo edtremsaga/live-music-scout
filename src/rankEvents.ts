@@ -1,4 +1,5 @@
 import type { ClassifiedEvent, Preferences, RankedEvent } from "./types.js";
+import { hasEventStatusIssue } from "./eventStatus.js";
 
 function toSearchBlob(event: ClassifiedEvent): string {
   return [
@@ -182,7 +183,11 @@ export function rankEvents(
       }
 
       let verdict: RankedEvent["verdict"] = "Skip";
-      if (event.classification.isLikelyMusic && event.classification.musicConfidence !== "Low" && score >= 6) {
+      if (hasEventStatusIssue(event)) {
+        score -= 8;
+        matchReasons.push("event status appears postponed, canceled, or rescheduled");
+        verdict = "Skip";
+      } else if (event.classification.isLikelyMusic && event.classification.musicConfidence !== "Low" && score >= 6) {
         verdict = "Go";
       } else if (
         (event.classification.isLikelyMusic && score >= 2)
