@@ -81,6 +81,18 @@ test("Tim's Tavern is configured as an honest TODO live-music venue source", () 
   assert.match(timsTavern.notes ?? "", /Cloudflare challenge/i);
 });
 
+test("SeaMonster Lounge is configured as an honest TODO live-music venue source", () => {
+  const sources = loadSources();
+  const seaMonster = sources.find((source) => source.name === "SeaMonster Lounge");
+
+  assert.ok(seaMonster);
+  assert.equal(seaMonster.parser, "configuredTodo");
+  assert.equal(seaMonster.parserStatus, "todo");
+  assert.equal(seaMonster.sourceType, "venue");
+  assert.equal(seaMonster.musicOnly, true);
+  assert.match(seaMonster.notes ?? "", /calendar URL currently returns 404/i);
+});
+
 test("El Corazon is configured as an honest TODO live-music venue source", () => {
   const sources = loadSources();
   const elCorazon = sources.find((source) => source.name === "El Corazon");

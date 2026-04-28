@@ -38,6 +38,10 @@ function buildTripleDoorPageUrl(page: number): string {
   return `${TRIPLE_DOOR_BASE_URL}/calendar_features?calendar_feature_id=${UPCOMING_CALENDAR_FEATURE_ID}&calendar_page=${page}`;
 }
 
+function isMissingPaginationPage(error: unknown): boolean {
+  return error instanceof Error && /\bHTTP 404\b/i.test(error.message);
+}
+
 function collectGenreHints(title: string, description?: string): string[] {
   const blob = `${title} ${description ?? ""}`.toLowerCase();
   const hints = new Set<string>(["listening room", "seated venue", "musicianship"]);
@@ -144,9 +148,22 @@ export async function parseTripleDoor(html: string, context: ParserContext): Pro
 
   for (let page = 1; page <= MAX_TRIPLE_DOOR_PAGES; page += 1) {
     const pageUrl = buildTripleDoorPageUrl(page);
-    const pageHtml = page === 1
-      ? html
-      : await fetchPage(pageUrl);
+    let pageHtml: string;
+
+    if (page === 1) {
+      pageHtml = html;
+    } else {
+      try {
+        pageHtml = await fetchPage(pageUrl);
+      } catch (error) {
+        if (isMissingPaginationPage(error)) {
+          break;
+        }
+
+        throw error;
+      }
+    }
+
     const listings = extractTripleDoorListings(pageHtml);
     pagesFetched += 1;
 

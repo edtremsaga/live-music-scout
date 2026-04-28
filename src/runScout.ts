@@ -62,7 +62,9 @@ export async function runScout(options: RunScoutOptions = {}): Promise<ScoutRunR
     }
 
     try {
-      const html = await fetchPage(source.url);
+      const html = source.parser === "configuredTodo"
+        ? ""
+        : await fetchPage(source.url);
       const result = await parser(html, { source, now, timezone });
       const matchedEvents = result.events.filter((event) => isDateInRange(event.date, startKey, endKey));
       const classifiedMatchedEvents = classifyEvents(matchedEvents);
@@ -79,7 +81,7 @@ export async function runScout(options: RunScoutOptions = {}): Promise<ScoutRunR
         sourceName: source.name,
         parserName: source.parser,
         ok: true,
-        fetchStatus: "fetched",
+        fetchStatus: source.parser === "configuredTodo" ? "skipped" : "fetched",
         message: result.statusMessage,
         candidateCount: result.candidateCount ?? result.events.length,
         matchedCount: matchedEvents.length,
