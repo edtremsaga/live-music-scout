@@ -2,13 +2,16 @@ import { cleanDisplayText, formatDateKeyShort, formatDateKeyWeekday, formatDateR
 import { getEventStatusIssueReason, hasEventStatusIssue } from "./eventStatus.js";
 import type { RankedEvent } from "./types.js";
 
-type WeeklyHighlightGroup = {
+export type WeeklyHighlightGroup = {
   key: string;
   representative: RankedEvent;
   events: RankedEvent[];
 };
 
-const MAX_WEEKLY_HIGHLIGHTS = 8;
+const MAX_WEEKLY_HIGHLIGHTS = 6;
+const MAX_WEEKLY_ALSO_WORTH = 6;
+const MAX_WEEKLY_ALSO_WORTH_PER_VENUE = 2;
+const MAX_WEEKLY_ALSO_WORTH_PER_SOURCE = 2;
 const MAX_WEEKLY_HIGHLIGHTS_PER_VENUE = 2;
 const MAX_WEEKLY_HIGHLIGHTS_PER_SOURCE = 2;
 const WEEKLY_DIVERSITY_OVERRIDE_GAP = 1;
@@ -334,7 +337,7 @@ function renderHighlightHtml(event: RankedEvent): string {
   return items.join("");
 }
 
-function selectEmailSections(rankedEvents: RankedEvent[]): {
+export function selectEmailSections(rankedEvents: RankedEvent[]): {
   highlights: RankedEvent[];
   alsoWorthChecking: RankedEvent[];
   remaining: RankedEvent[];
@@ -455,6 +458,25 @@ function isAggregateMultiNightListing(event: RankedEvent): boolean {
   return /\bBOTH SHOWS\b/i.test(publicText(event.artist ?? event.title));
 }
 
+function isGenericRoyalRoomHappyHour(event: RankedEvent): boolean {
+  if (event.venue !== "The Royal Room" && event.sourceName !== "The Royal Room") {
+    return false;
+  }
+
+  const title = publicText(event.artist ?? event.title).toLowerCase();
+
+  if (!title.includes("happy hour")) {
+    return false;
+  }
+
+  return !(
+    /\b(album release|record release|release show|trio|quartet|quintet|sextet|septet|ensemble|orchestra|band)\b/.test(title)
+    || /\bw\//.test(title)
+    || /\bfeat\.?\b/.test(title)
+    || /\bplays the music\b/.test(title)
+  );
+}
+
 function getWeeklyHighlightGroupScore(group: WeeklyHighlightGroup): number {
   const uniqueDates = new Set(group.events.map((event) => event.date)).size;
   const multiNightBonus = uniqueDates > 1 ? Math.min(uniqueDates - 1, 2) * 3 + 1 : 0;
@@ -536,10 +558,12 @@ function renderWeeklyHighlightHtml(group: WeeklyHighlightGroup): string {
     .join("");
 }
 
-function selectWeeklyEmailSections(rankedEvents: RankedEvent[]): {
+export function selectWeeklyEmailSections(rankedEvents: RankedEvent[]): {
   highlights: WeeklyHighlightGroup[];
+  alsoWorthALook: WeeklyHighlightGroup[];
   evaluatedByDay: Map<string, RankedEvent[]>;
   highlightIds: Set<string>;
+  alsoWorthALookIds: Set<string>;
 } {
   const highlightCandidates = rankedEvents
     .filter(
@@ -549,6 +573,7 @@ function selectWeeklyEmailSections(rankedEvents: RankedEvent[]): {
         && !hasEventStatusIssue(event)
         && (!isRecurringJamNight(event) || event.score >= 12)
         && (!isMixedFormatPerformance(event) || event.score >= 12)
+        && !isGenericRoyalRoomHappyHour(event)
     );
   const groupedHighlights = new Map<string, WeeklyHighlightGroup>();
 
@@ -615,7 +640,31 @@ function selectWeeklyEmailSections(rankedEvents: RankedEvent[]): {
     }
   }
 
+  const highlightKeys = new Set(highlights.map((group) => group.key));
+  const alsoWorthALook: WeeklyHighlightGroup[] = [];
+
+  for (const group of sortedGroups) {
+    if (highlightKeys.has(group.key) || alsoWorthALook.length >= MAX_WEEKLY_ALSO_WORTH) {
+      continue;
+    }
+
+    const venueCounts = countBy(alsoWorthALook, (item) => publicText(item.representative.venue));
+    const sourceCounts = countBy(alsoWorthALook, (item) => publicText(item.representative.sourceName));
+    const venueKey = publicText(group.representative.venue);
+    const sourceKey = publicText(group.representative.sourceName);
+
+    if (
+      (venueCounts.get(venueKey) ?? 0) >= MAX_WEEKLY_ALSO_WORTH_PER_VENUE
+      || (sourceCounts.get(sourceKey) ?? 0) >= MAX_WEEKLY_ALSO_WORTH_PER_SOURCE
+    ) {
+      continue;
+    }
+
+    alsoWorthALook.push(group);
+  }
+
   const highlightIds = new Set(highlights.flatMap((group) => group.events.map((event) => event.id)));
+  const alsoWorthALookIds = new Set(alsoWorthALook.flatMap((group) => group.events.map((event) => event.id)));
   const evaluatedByDay = new Map<string, RankedEvent[]>();
   const aggregateMultiNightKeysWithNightlyEntries = new Set(
     rankedEvents
@@ -633,11 +682,11 @@ function selectWeeklyEmailSections(rankedEvents: RankedEvent[]): {
     evaluatedByDay.set(event.date, existing);
   }
 
-  return { highlights, evaluatedByDay, highlightIds };
+  return { highlights, alsoWorthALook, evaluatedByDay, highlightIds, alsoWorthALookIds };
 }
 
-function renderWeeklyEvaluatedItem(event: RankedEvent, isHighlighted: boolean): string {
-  const reason = getWeeklyEvaluatedReason(event, isHighlighted);
+function renderWeeklyEvaluatedItem(event: RankedEvent, isHighlighted: boolean, isAlsoWorthALook = false): string {
+  const reason = getWeeklyEvaluatedReason(event, isHighlighted, isAlsoWorthALook);
   const title = publicText(event.artist ?? event.title);
   const venue = publicText(event.venue);
   const timePart = event.time ? ` — ${event.time}` : "";
@@ -645,8 +694,8 @@ function renderWeeklyEvaluatedItem(event: RankedEvent, isHighlighted: boolean): 
   return `- ${title} — ${venue}${timePart} — ${publicText(reason)} ${formatSourceLinkMarkdown(event)}`;
 }
 
-function renderWeeklyEvaluatedItemHtml(event: RankedEvent, isHighlighted: boolean): string {
-  const reason = getWeeklyEvaluatedReason(event, isHighlighted);
+function renderWeeklyEvaluatedItemHtml(event: RankedEvent, isHighlighted: boolean, isAlsoWorthALook = false): string {
+  const reason = getWeeklyEvaluatedReason(event, isHighlighted, isAlsoWorthALook);
   const title = publicText(event.artist ?? event.title);
   const venue = publicText(event.venue);
   const timePart = event.time ? ` — ${event.time}` : "";
@@ -654,9 +703,13 @@ function renderWeeklyEvaluatedItemHtml(event: RankedEvent, isHighlighted: boolea
   return `<li>${escapeHtml(title)} — ${escapeHtml(venue)}${escapeHtml(timePart)} — ${escapeHtml(publicText(reason))} ${formatSourceLinkHtml(event)}</li>`;
 }
 
-function getWeeklyEvaluatedReason(event: RankedEvent, isHighlighted: boolean): string {
+function getWeeklyEvaluatedReason(event: RankedEvent, isHighlighted: boolean, isAlsoWorthALook = false): string {
   if (isHighlighted) {
     return "Highlighted above.";
+  }
+
+  if (isAlsoWorthALook) {
+    return "Also worth a look above.";
   }
 
   if (hasEventStatusIssue(event)) {
@@ -755,7 +808,7 @@ export function generateWeeklyEmailPreview(
   startKey: string,
   endKey: string
 ): string {
-  const { highlights, evaluatedByDay, highlightIds } = selectWeeklyEmailSections(rankedEvents);
+  const { highlights, alsoWorthALook, evaluatedByDay, highlightIds, alsoWorthALookIds } = selectWeeklyEmailSections(rankedEvents);
   const sections: string[] = [
     "Subject: Live Music Scout — This Week around Seattle/Bellevue",
     "",
@@ -764,6 +817,12 @@ export function generateWeeklyEmailPreview(
     "## This Week’s Highlights",
     highlights.length > 0 ? highlights.map(renderWeeklyHighlight).join("\n\n") : "No strong highlights this week."
   ];
+
+  if (alsoWorthALook.length > 0) {
+    sections.push("");
+    sections.push("## Also Worth a Look");
+    sections.push(alsoWorthALook.map(renderWeeklyHighlight).join("\n\n"));
+  }
 
   sections.push("");
   sections.push("## Evaluated Shows by Day");
@@ -774,7 +833,7 @@ export function generateWeeklyEmailPreview(
     for (const [dateKey, events] of Array.from(evaluatedByDay.entries()).sort(([a], [b]) => a.localeCompare(b))) {
       sections.push("");
       sections.push(`### ${formatDateKeyWeekday(dateKey)}`);
-      sections.push(events.map((event) => renderWeeklyEvaluatedItem(event, highlightIds.has(event.id))).join("\n"));
+      sections.push(events.map((event) => renderWeeklyEvaluatedItem(event, highlightIds.has(event.id), alsoWorthALookIds.has(event.id))).join("\n"));
     }
   }
 
@@ -790,7 +849,7 @@ export function generateWeeklyEmailHtml(
   startKey: string,
   endKey: string
 ): string {
-  const { highlights, evaluatedByDay, highlightIds } = selectWeeklyEmailSections(rankedEvents);
+  const { highlights, alsoWorthALook, evaluatedByDay, highlightIds, alsoWorthALookIds } = selectWeeklyEmailSections(rankedEvents);
 
   return [
     "<!doctype html>",
@@ -799,6 +858,9 @@ export function generateWeeklyEmailHtml(
     `<p><strong>Date range:</strong> ${escapeHtml(formatDateRangeLong(startKey, endKey))}</p>`,
     "<h2>This Week’s Highlights</h2>",
     highlights.length > 0 ? highlights.map(renderWeeklyHighlightHtml).join("") : "<p>No strong highlights this week.</p>",
+    alsoWorthALook.length > 0
+      ? `<h2>Also Worth a Look</h2>${alsoWorthALook.map(renderWeeklyHighlightHtml).join("")}`
+      : "",
     "<h2>Evaluated Shows by Day</h2>",
     evaluatedByDay.size === 0
       ? "<p>No other evaluated shows in this window.</p>"
@@ -806,7 +868,7 @@ export function generateWeeklyEmailHtml(
           .sort(([a], [b]) => a.localeCompare(b))
           .map(
             ([dateKey, events]) =>
-              `<h3>${escapeHtml(formatDateKeyWeekday(dateKey))}</h3><ul>${events.map((event) => renderWeeklyEvaluatedItemHtml(event, highlightIds.has(event.id))).join("")}</ul>`
+              `<h3>${escapeHtml(formatDateKeyWeekday(dateKey))}</h3><ul>${events.map((event) => renderWeeklyEvaluatedItemHtml(event, highlightIds.has(event.id), alsoWorthALookIds.has(event.id))).join("")}</ul>`
           )
           .join(""),
     "<p><em>Evaluated from the configured venue sources; not a complete citywide calendar.</em></p>",

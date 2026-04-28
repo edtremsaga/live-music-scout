@@ -345,6 +345,136 @@ test("weekly preview dedupes repeated multi-night highlights but keeps dated eve
   assert.match(output, /### Friday, May 1[\s\S]*Highlighted above\./);
 });
 
+test("weekly preview caps highlights and adds also worth a look", () => {
+  const events = Array.from({ length: 8 }, (_, index) => makeRankedEvent({
+    id: `weekly-pick-${index + 1}`,
+    title: `Weekly Pick ${index + 1}`,
+    artist: `Weekly Pick ${index + 1}`,
+    venue: `Venue ${index + 1}`,
+    sourceName: `Source ${index + 1}`,
+    url: `https://example.com/weekly-pick-${index + 1}`,
+    date: `2026-05-0${Math.min(index + 1, 5)}`,
+    score: 30 - index,
+    verdict: "Go"
+  }));
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-04-26T12:00:00-07:00"),
+    events,
+    "2026-04-26",
+    "2026-05-03"
+  );
+  const highlightsSection = output.slice(output.indexOf("## This Week’s Highlights"), output.indexOf("## Also Worth a Look"));
+  const alsoWorthSection = output.slice(output.indexOf("## Also Worth a Look"), output.indexOf("## Evaluated Shows by Day"));
+
+  assert.equal((highlightsSection.match(/^### /gm) ?? []).length, 6);
+  assert.match(highlightsSection, /### Weekly Pick 1/);
+  assert.match(highlightsSection, /### Weekly Pick 6/);
+  assert.doesNotMatch(highlightsSection, /### Weekly Pick 7/);
+  assert.match(alsoWorthSection, /### Weekly Pick 7/);
+  assert.match(alsoWorthSection, /### Weekly Pick 8/);
+  assert.match(output, /Weekly Pick 7 — Venue 7[\s\S]*Also worth a look above\./);
+  assert.doesNotMatch(alsoWorthSection, /### Weekly Pick 1/);
+});
+
+test("weekly html includes Also Worth a Look when secondary picks exist", () => {
+  const events = Array.from({ length: 7 }, (_, index) => makeRankedEvent({
+    id: `html-weekly-pick-${index + 1}`,
+    title: `HTML Weekly Pick ${index + 1}`,
+    artist: `HTML Weekly Pick ${index + 1}`,
+    venue: `HTML Venue ${index + 1}`,
+    sourceName: `HTML Source ${index + 1}`,
+    url: `https://example.com/html-weekly-pick-${index + 1}`,
+    date: "2026-05-01",
+    score: 30 - index,
+    verdict: "Go"
+  }));
+
+  const html = generateWeeklyEmailHtml(
+    new Date("2026-04-26T12:00:00-07:00"),
+    events,
+    "2026-04-26",
+    "2026-05-03"
+  );
+
+  assert.match(html, /<h2>Also Worth a Look<\/h2>/);
+  assert.ok(html.indexOf("<h3>HTML Weekly Pick 7</h3>") > html.indexOf("<h2>Also Worth a Look</h2>"));
+});
+
+test("weekly top sections skip generic Royal Room happy hour listings", () => {
+  const strongPicks = Array.from({ length: 8 }, (_, index) => makeRankedEvent({
+    id: `strong-weekly-${index + 1}`,
+    title: `Strong Weekly ${index + 1}`,
+    artist: `Strong Weekly ${index + 1}`,
+    venue: `Venue ${index + 1}`,
+    sourceName: `Source ${index + 1}`,
+    url: `https://example.com/strong-weekly-${index + 1}`,
+    date: `2026-05-0${Math.min(index + 1, 5)}`,
+    score: 30 - index,
+    verdict: "Go"
+  }));
+  const happyHour = makeRankedEvent({
+    id: "happy-hour-sheryl",
+    title: "Happy Hour with Sheryl Wiser",
+    artist: "Happy Hour with Sheryl Wiser",
+    venue: "The Royal Room",
+    sourceName: "The Royal Room",
+    url: "https://theroyalroomseattle.com/event/happy-hour-sheryl-wiser/",
+    date: "2026-05-01",
+    score: 29,
+    verdict: "Go"
+  });
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-04-26T12:00:00-07:00"),
+    [strongPicks[0], happyHour, ...strongPicks.slice(1)],
+    "2026-04-26",
+    "2026-05-03"
+  );
+  const topSections = output.slice(output.indexOf("## This Week’s Highlights"), output.indexOf("## Evaluated Shows by Day"));
+  const evaluatedSection = output.slice(output.indexOf("## Evaluated Shows by Day"));
+
+  assert.doesNotMatch(topSections, /### Happy Hour with Sheryl Wiser/);
+  assert.match(evaluatedSection, /Happy Hour with Sheryl Wiser — The Royal Room/);
+  assert.doesNotMatch(evaluatedSection, /Happy Hour with Sheryl Wiser[^\n]*Also worth a look above\./);
+  assert.doesNotMatch(evaluatedSection, /Happy Hour with Sheryl Wiser[^\n]*Highlighted above\./);
+});
+
+test("weekly top sections allow Royal Room happy hour listings with strong music signals", () => {
+  const strongPicks = Array.from({ length: 6 }, (_, index) => makeRankedEvent({
+    id: `strong-weekly-signal-${index + 1}`,
+    title: `Strong Weekly Signal ${index + 1}`,
+    artist: `Strong Weekly Signal ${index + 1}`,
+    venue: `Venue ${index + 1}`,
+    sourceName: `Source ${index + 1}`,
+    url: `https://example.com/strong-weekly-signal-${index + 1}`,
+    date: `2026-05-0${Math.min(index + 1, 5)}`,
+    score: 30 - index,
+    verdict: "Go"
+  }));
+  const happyHourTrio = makeRankedEvent({
+    id: "happy-hour-trio",
+    title: "Happy Hour Trio Album Release",
+    artist: "Happy Hour Trio Album Release",
+    venue: "The Royal Room",
+    sourceName: "The Royal Room",
+    url: "https://theroyalroomseattle.com/event/happy-hour-trio-album-release/",
+    date: "2026-05-01",
+    score: 23,
+    verdict: "Go"
+  });
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-04-26T12:00:00-07:00"),
+    [...strongPicks, happyHourTrio],
+    "2026-04-26",
+    "2026-05-03"
+  );
+  const topSections = output.slice(output.indexOf("## This Week’s Highlights"), output.indexOf("## Evaluated Shows by Day"));
+
+  assert.match(topSections, /### Happy Hour Trio Album Release/);
+});
+
 test("single-date weekly highlights show date and time in markdown and html", () => {
   const jessie = makeRankedEvent({
     id: "jessie",
@@ -504,11 +634,14 @@ test("weekly highlights apply a light venue diversity cap when alternatives exis
     "2026-04-26",
     "2026-05-03"
   );
+  const highlightsSection = output.includes("## Also Worth a Look")
+    ? output.slice(output.indexOf("## This Week’s Highlights"), output.indexOf("## Also Worth a Look"))
+    : output.slice(output.indexOf("## This Week’s Highlights"), output.indexOf("## Evaluated Shows by Day"));
 
-  assert.match(output, /### Tractor One/);
-  assert.match(output, /### Tractor Two/);
-  assert.doesNotMatch(output, /### Tractor Three/);
-  assert.match(output, /### Pat Metheny Side-Eye III\+/);
+  assert.match(highlightsSection, /### Tractor One/);
+  assert.match(highlightsSection, /### Tractor Two/);
+  assert.doesNotMatch(highlightsSection, /### Tractor Three/);
+  assert.match(highlightsSection, /### Pat Metheny Side-Eye III\+/);
 });
 
 test("grouped multi-night strong run can beat a generic one-off weekly highlight", () => {
@@ -629,9 +762,12 @@ test("grouped multi-night strong run can beat a generic one-off weekly highlight
     "2026-04-26",
     "2026-05-03"
   );
+  const highlightsSection = output.includes("## Also Worth a Look")
+    ? output.slice(output.indexOf("## This Week’s Highlights"), output.indexOf("## Also Worth a Look"))
+    : output.slice(output.indexOf("## This Week’s Highlights"), output.indexOf("## Evaluated Shows by Day"));
 
-  assert.match(output, /### KEXP's Roadhouse Presents: Vincent Neil Emerson w\/ Kade Hoffman/);
-  assert.doesNotMatch(output, /### Happy Hour with Sheryl Wiser/);
+  assert.match(highlightsSection, /### KEXP's Roadhouse Presents: Vincent Neil Emerson w\/ Kade Hoffman/);
+  assert.doesNotMatch(highlightsSection, /### Happy Hour with Sheryl Wiser/);
 });
 
 test("weekly diversity does not force weak events into highlights", () => {
