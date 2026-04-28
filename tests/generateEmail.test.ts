@@ -148,6 +148,116 @@ test("preview uses highlights and all evaluated sections", () => {
   assert.match(output, /## All Evaluated Shows/);
 });
 
+test("daily preview separates Go highlights from Maybe also-worth-checking items", () => {
+  const olllam = makeRankedEvent({
+    id: "olllam",
+    title: "the olllam w/ Lila Forde",
+    artist: "the olllam w/ Lila Forde",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/olllam",
+    score: 18,
+    verdict: "Go"
+  });
+  const karrin = makeRankedEvent({
+    id: "karrin",
+    title: "Karrin Allyson",
+    artist: "Karrin Allyson",
+    venue: "Dimitriou's Jazz Alley",
+    sourceName: "Dimitriou's Jazz Alley",
+    url: "https://www.jazzalley.com/www-home/artist.jsp?shownum=8764",
+    score: 17,
+    verdict: "Go"
+  });
+  const dervish = makeRankedEvent({
+    id: "dervish",
+    title: "Dervish",
+    artist: "Dervish",
+    venue: "The Triple Door",
+    sourceName: "The Triple Door",
+    url: "https://thetripledoor.net/event/6337819/743008797/dervish",
+    score: 16,
+    verdict: "Go"
+  });
+  const alice = makeRankedEvent({
+    id: "alice",
+    title: "Alice Phoebe Lou",
+    artist: "Alice Phoebe Lou",
+    venue: "The Neptune Theatre",
+    sourceName: "STG Presents",
+    url: "https://www.stgpresents.org/events/alice-phoebe-lou/",
+    score: 5,
+    verdict: "Maybe"
+  });
+  const helloween = makeRankedEvent({
+    id: "helloween",
+    title: "Helloween",
+    artist: "Helloween",
+    venue: "The Paramount Theatre",
+    sourceName: "STG Presents",
+    url: "https://www.stgpresents.org/events/helloween/",
+    score: 4,
+    verdict: "Maybe"
+  });
+  const quiltSessions = makeRankedEvent({
+    id: "quilt-sessions",
+    title: "The Quilt Sessions: April",
+    artist: "The Quilt Sessions: April",
+    venue: "The Royal Room",
+    sourceName: "The Royal Room",
+    url: "https://theroyalroomseattle.com/event/the-quilt-sessions-april26-3/",
+    score: -2,
+    verdict: "Skip",
+    classification: {
+      isLikelyMusic: false,
+      musicConfidence: "Low",
+      eventType: "unknown",
+      fitReason: "fixture fit reason"
+    }
+  });
+
+  const output = generateEmailPreview(
+    new Date("2026-04-28T12:00:00-07:00"),
+    [olllam, karrin, dervish, alice, helloween, quiltSessions]
+  );
+  const highlightsSection = output.slice(output.indexOf("## Tonight’s Highlights"), output.indexOf("## Also Worth Checking"));
+  const alsoWorthCheckingSection = output.slice(output.indexOf("## Also Worth Checking"), output.indexOf("## All Evaluated Shows"));
+  const evaluatedSection = output.slice(output.indexOf("## All Evaluated Shows"));
+
+  assert.match(highlightsSection, /### the olllam w\/ Lila Forde/);
+  assert.match(highlightsSection, /### Karrin Allyson/);
+  assert.match(highlightsSection, /### Dervish/);
+  assert.doesNotMatch(highlightsSection, /### Alice Phoebe Lou/);
+  assert.doesNotMatch(highlightsSection, /### Helloween/);
+  assert.match(alsoWorthCheckingSection, /### Alice Phoebe Lou/);
+  assert.match(alsoWorthCheckingSection, /### Helloween/);
+  assert.match(evaluatedSection, /The Quilt Sessions: April/);
+  assert.doesNotMatch(evaluatedSection, /Alice Phoebe Lou/);
+  assert.doesNotMatch(evaluatedSection, /Helloween/);
+});
+
+test("daily html includes Also Worth Checking when Maybe items are present", () => {
+  const highlight = makeRankedEvent({
+    id: "highlight",
+    title: "Strong Pick",
+    artist: "Strong Pick",
+    verdict: "Go",
+    score: 12
+  });
+  const maybe = makeRankedEvent({
+    id: "maybe",
+    title: "Maybe Pick",
+    artist: "Maybe Pick",
+    verdict: "Maybe",
+    score: 4
+  });
+
+  const html = generateEmailHtml(new Date("2026-04-28T12:00:00-07:00"), [highlight, maybe]);
+
+  assert.match(html, /<h2>Also Worth Checking<\/h2>/);
+  assert.ok(html.indexOf("<h3>Maybe Pick</h3>") > html.indexOf("<h2>Also Worth Checking</h2>"));
+});
+
 test("html output includes clickable anchor tags", () => {
   const event = makeRankedEvent({
     sourceName: "The Royal Room",

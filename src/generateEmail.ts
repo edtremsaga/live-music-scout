@@ -336,21 +336,34 @@ function renderHighlightHtml(event: RankedEvent): string {
 
 function selectEmailSections(rankedEvents: RankedEvent[]): {
   highlights: RankedEvent[];
+  alsoWorthChecking: RankedEvent[];
   remaining: RankedEvent[];
-  noStrongMatches: boolean;
 } {
-  const highlights = rankedEvents
+  const highlightCandidates = rankedEvents.filter(
+    (event) =>
+      event.verdict === "Go"
+      && event.classification.isLikelyMusic
+      && !hasEventStatusIssue(event)
+  );
+  const highlights = highlightCandidates.slice(0, 3);
+  const fourthCandidate = highlightCandidates[3];
+
+  if (fourthCandidate && fourthCandidate.score >= 12) {
+    highlights.push(fourthCandidate);
+  }
+
+  const alsoWorthChecking = rankedEvents
     .filter(
       (event) =>
-        (event.verdict === "Go" || event.verdict === "Maybe")
+        event.verdict === "Maybe"
         && event.classification.isLikelyMusic
         && !hasEventStatusIssue(event)
-      )
+    )
     .slice(0, 5);
-  const noStrongMatches = highlights.length === 0;
-  const remaining = rankedEvents.filter((event) => !highlights.some((picked) => picked.id === event.id));
+  const shownIds = new Set([...highlights, ...alsoWorthChecking].map((event) => event.id));
+  const remaining = rankedEvents.filter((event) => !shownIds.has(event.id));
 
-  return { highlights, remaining, noStrongMatches };
+  return { highlights, alsoWorthChecking, remaining };
 }
 
 function renderEvaluatedItem(event: RankedEvent): string {
@@ -684,7 +697,7 @@ function getWeeklyEvaluatedReason(event: RankedEvent, isHighlighted: boolean): s
 }
 
 export function generateEmailPreview(now: Date, rankedEvents: RankedEvent[]): string {
-  const { highlights, remaining, noStrongMatches } = selectEmailSections(rankedEvents);
+  const { highlights, alsoWorthChecking, remaining } = selectEmailSections(rankedEvents);
 
   const sections: string[] = [
     "Subject: Live Music Scout — Tonight around Seattle/Bellevue",
@@ -694,6 +707,12 @@ export function generateEmailPreview(now: Date, rankedEvents: RankedEvent[]): st
     "## Tonight’s Highlights",
     highlights.length > 0 ? highlights.map(renderHighlight).join("\n\n") : "No strong highlights tonight."
   ];
+
+  if (alsoWorthChecking.length > 0) {
+    sections.push("");
+    sections.push("## Also Worth Checking");
+    sections.push(alsoWorthChecking.map(renderHighlight).join("\n\n"));
+  }
 
   sections.push("");
   sections.push("## All Evaluated Shows");
@@ -709,7 +728,7 @@ export function generateEmailPreview(now: Date, rankedEvents: RankedEvent[]): st
 }
 
 export function generateEmailHtml(now: Date, rankedEvents: RankedEvent[]): string {
-  const { highlights, remaining } = selectEmailSections(rankedEvents);
+  const { highlights, alsoWorthChecking, remaining } = selectEmailSections(rankedEvents);
 
   return [
     "<!doctype html>",
@@ -718,6 +737,9 @@ export function generateEmailHtml(now: Date, rankedEvents: RankedEvent[]): strin
     `<p><strong>Date:</strong> ${escapeHtml(formatTonightLong(now))}</p>`,
     "<h2>Tonight’s Highlights</h2>",
     highlights.length > 0 ? highlights.map(renderHighlightHtml).join("") : "<p>No strong highlights tonight.</p>",
+    alsoWorthChecking.length > 0
+      ? `<h2>Also Worth Checking</h2>${alsoWorthChecking.map(renderHighlightHtml).join("")}`
+      : "",
     "<h2>All Evaluated Shows</h2>",
     remaining.length > 0
       ? `<ul>${remaining.map(renderEvaluatedItemHtml).join("")}</ul>`
