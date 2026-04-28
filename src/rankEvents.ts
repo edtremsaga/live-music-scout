@@ -60,6 +60,24 @@ function hasAny(text: string, terms: string[]): boolean {
   return terms.some((term) => text.includes(term));
 }
 
+const RELEASE_SHOW_TERMS = ["album release", "record release", "release show"];
+const BENEFIT_OR_FUNDRAISER_TERMS = ["benefit concert", "fundraiser", "benefit for"];
+const ARTIST_DETAIL_TERMS = [
+  " w/ ",
+  " feat.",
+  " with ",
+  "trio",
+  "quartet",
+  "quintet",
+  "sextet",
+  "septet",
+  "ensemble",
+  "orchestra",
+  "band",
+  "songteller",
+  "plays the music"
+];
+
 export function rankEvents(
   events: ClassifiedEvent[],
   preferences: Preferences,
@@ -125,6 +143,16 @@ export function rankEvents(
       if (blob.includes("funk") || blob.includes("soul")) {
         score += 2;
         matchReasons.push("funk or soul language fits well");
+      }
+
+      if (hasAny(blob, RELEASE_SHOW_TERMS)) {
+        score += 3;
+        matchReasons.push("release-show language makes this feel more music-forward");
+      }
+
+      if (hasAny(blob, BENEFIT_OR_FUNDRAISER_TERMS) && !hasAny(blob, ARTIST_DETAIL_TERMS)) {
+        score -= 3;
+        matchReasons.push("benefit/fundraiser wording is plausible music but light on artist detail");
       }
 
       if (

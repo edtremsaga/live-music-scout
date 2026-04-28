@@ -166,3 +166,15 @@ test("Royal Room specific music-looking titles classify as likely music", () => 
     assert.equal(classified.classification.isLikelyMusic, true, title);
   }
 });
+
+test("Royal Room benefit concert remains plausible music", () => {
+  const classified = classifyEvent(makeEvent({
+    title: "“The Work” A May Day Benefit Concert for OneAmerica",
+    venue: "The Royal Room",
+    sourceName: "The Royal Room",
+    url: "https://theroyalroomseattle.com/event/the-work-a-may-day-benefit-concert-for-oneamerica/"
+  }));
+
+  assert.equal(classified.classification.isLikelyMusic, true);
+  assert.equal(classified.classification.eventType, "music");
+});
