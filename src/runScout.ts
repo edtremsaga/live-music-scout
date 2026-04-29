@@ -7,7 +7,7 @@ import { generateEmailHtml, generateEmailPreview, generateWeeklyEmailHtml, gener
 import { parsers } from "./parsers/index.js";
 import { rankEvents } from "./rankEvents.js";
 import { readSeenEventsStore, writeSeenEventsStore } from "./storage.js";
-import type { LiveMusicEvent, RankedEvent, ReportKind, SourceRunStatus } from "./types.js";
+import type { LiveMusicEvent, RankedEvent, ReportKind, SourceConfig, SourceRunStatus } from "./types.js";
 
 export type ScoutRunResult = {
   generatedAt: Date;
@@ -16,6 +16,7 @@ export type ScoutRunResult = {
   preview: string;
   html: string;
   rankedEvents: RankedEvent[];
+  sources: SourceConfig[];
   statuses: SourceRunStatus[];
   finalEmailItemCount: number;
   startKey: string;
@@ -24,12 +25,14 @@ export type ScoutRunResult = {
 
 type RunScoutOptions = {
   reportKind?: ReportKind;
+  updateSeen?: boolean;
 };
 
 export async function runScout(options: RunScoutOptions = {}): Promise<ScoutRunResult> {
   const now = new Date();
   const timezone = getPacificTimezone();
   const reportKind = options.reportKind ?? "tonight";
+  const updateSeen = options.updateSeen ?? true;
   const startKey = getDateKeyWithOffset(now, 0, timezone);
   const endKey = getDateKeyWithOffset(now, reportKind === "week" ? 7 : 0, timezone);
   const matchedLabel = reportKind === "week" ? "in range" : "tonight";
@@ -120,12 +123,14 @@ export async function runScout(options: RunScoutOptions = {}): Promise<ScoutRunR
       : generateEmailHtml(now, rankedEvents);
   const finalEmailItemCount = rankedEvents.length;
 
-  await writeSeenEventsStore({
-    seenEventIds: [
-      ...seenStore.seenEventIds,
-      ...rankedEvents.filter((event) => event.verdict !== "Skip").map((event) => event.id)
-    ]
-  });
+  if (updateSeen) {
+    await writeSeenEventsStore({
+      seenEventIds: [
+        ...seenStore.seenEventIds,
+        ...rankedEvents.filter((event) => event.verdict !== "Skip").map((event) => event.id)
+      ]
+    });
+  }
 
   return {
     generatedAt: now,
@@ -134,6 +139,7 @@ export async function runScout(options: RunScoutOptions = {}): Promise<ScoutRunR
     preview,
     html,
     rankedEvents,
+    sources,
     statuses,
     finalEmailItemCount,
     startKey,
