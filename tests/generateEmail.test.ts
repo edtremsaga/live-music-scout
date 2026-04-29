@@ -355,6 +355,47 @@ test("weekly preview dedupes repeated multi-night highlights but keeps dated eve
   assert.match(output, /### Friday, May 1[\s\S]*Highlighted above\./);
 });
 
+test("weekly preview groups Sunset album-release night runs but keeps nightly evaluated entries", () => {
+  const nightOne = makeRankedEvent({
+    id: "zookraught-night-one",
+    title: "Zookraught Album Release Night 1 w/ Constant Lovers, OGRE, Miscomings",
+    artist: "Zookraught, OGRE, Miscomings, Constant Lovers",
+    venue: "Sunset Tavern",
+    sourceName: "Sunset Tavern",
+    url: "https://link.dice.fm/night-one",
+    date: "2026-05-01",
+    time: "9:00 PM",
+    score: 14,
+    verdict: "Go"
+  });
+  const nightTwo = makeRankedEvent({
+    id: "zookraught-night-two",
+    title: "Zookraught Album Release Night 2 w/ Black Ends, LOOLOWNINGEN, All of Our Cornbread",
+    artist: "Zookraught, Black Ends, LOOLOWNINGEN & THE FAR EAST IDIOTS",
+    venue: "Sunset Tavern",
+    sourceName: "Sunset Tavern",
+    url: "https://link.dice.fm/night-two",
+    date: "2026-05-02",
+    time: "9:00 PM",
+    score: 14,
+    verdict: "Go"
+  });
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-04-29T12:00:00-07:00"),
+    [nightOne, nightTwo],
+    "2026-04-29",
+    "2026-05-06"
+  );
+
+  assert.match(output, /### Zookraught Album Release/);
+  assert.doesNotMatch(output, /### Zookraught, OGRE, Miscomings, Constant Lovers/);
+  assert.doesNotMatch(output, /### Zookraught, Black Ends, LOOLOWNINGEN/);
+  assert.match(output, /- Dates: Fri, May 1, Sat, May 2/);
+  assert.match(output, /### Friday, May 1[\s\S]*Zookraught, OGRE, Miscomings, Constant Lovers[\s\S]*Highlighted above\./);
+  assert.match(output, /### Saturday, May 2[\s\S]*Zookraught, Black Ends, LOOLOWNINGEN & THE FAR EAST IDIOTS[\s\S]*Highlighted above\./);
+});
+
 test("weekly preview caps highlights and adds also worth a look", () => {
   const events = Array.from({ length: 8 }, (_, index) => makeRankedEvent({
     id: `weekly-pick-${index + 1}`,

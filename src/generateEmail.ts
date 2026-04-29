@@ -408,6 +408,7 @@ function renderEvaluatedItemHtml(event: RankedEvent): string {
 function normalizeWeeklyHighlightTitle(value: string): string {
   return publicText(value)
     .toLowerCase()
+    .replace(/\b(album release|record release|release show)\s+night\s+\d+\b.*$/g, "$1")
     .replace(/\bsold out!?\b/g, " ")
     .replace(/^[^:]{1,80}\bpresents:\s*/i, "")
     .replace(/\b(both shows|night one|night two|night 1|night 2)\b/g, " ")
@@ -417,7 +418,8 @@ function normalizeWeeklyHighlightTitle(value: string): string {
 }
 
 function getWeeklyHighlightKey(event: RankedEvent): string {
-  const title = normalizeWeeklyHighlightTitle(event.artist ?? event.title);
+  const titleSource = event.sourceName === "Sunset Tavern" ? event.title : event.artist ?? event.title;
+  const title = normalizeWeeklyHighlightTitle(titleSource);
   const venue = publicText(event.venue).toLowerCase();
   return `${venue}::${title}`;
 }
@@ -453,6 +455,7 @@ function formatWeeklyTimes(events: RankedEvent[]): string | undefined {
 
 function cleanGroupedHighlightDisplayTitle(value: string): string {
   return publicText(value)
+    .replace(/\b(album release|record release|release show)\s+night\s+\d+\b(?:\s+w\/.*)?$/gi, "$1")
     .replace(/\s+\b(BOTH SHOWS|NIGHT ONE|NIGHT TWO|Night 1|Night 2)\b/gi, "")
     .replace(/\s+/g, " ")
     .trim();
@@ -514,7 +517,8 @@ function buildWeeklyGroupTake(group: WeeklyHighlightGroup): string {
 
 function renderWeeklyHighlight(group: WeeklyHighlightGroup): string {
   const representative = group.representative;
-  const title = cleanGroupedHighlightDisplayTitle(representative.artist ?? representative.title);
+  const titleSource = group.events.length > 1 ? representative.title : representative.artist ?? representative.title;
+  const title = cleanGroupedHighlightDisplayTitle(titleSource);
   const venue = publicText(representative.venue);
   const location = publicText(representative.location ?? "Seattle area");
   const dates = Array.from(new Set(group.events.map((event) => event.date))).sort();
@@ -538,7 +542,8 @@ function renderWeeklyHighlight(group: WeeklyHighlightGroup): string {
 
 function renderWeeklyHighlightHtml(group: WeeklyHighlightGroup): string {
   const representative = group.representative;
-  const title = cleanGroupedHighlightDisplayTitle(representative.artist ?? representative.title);
+  const titleSource = group.events.length > 1 ? representative.title : representative.artist ?? representative.title;
+  const title = cleanGroupedHighlightDisplayTitle(titleSource);
   const venue = publicText(representative.venue);
   const location = publicText(representative.location ?? "Seattle area");
   const dates = Array.from(new Set(group.events.map((event) => event.date))).sort();
