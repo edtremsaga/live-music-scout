@@ -62,6 +62,16 @@ function makeScoutRunResult(overrides: Partial<ScoutRunResult> = {}): ScoutRunRe
         notes: "parser TODO: Slim's Last Chance is configured as a year-round Georgetown live-music club source, but a reliable parser is not implemented yet"
       },
       {
+        name: "Easy Street Records",
+        url: "https://easystreetonline.com/Events",
+        parser: "easyStreet",
+        sourceType: "venue",
+        musicOnly: true,
+        parserStatus: "todo",
+        notes:
+          "parser TODO: Easy Street Records official events page currently returns CloudFront 403 in the first-pass fetch path; public third-party listings are not reliable enough for automated venue coverage, so this needs a better official source or a manual-events fallback"
+      },
+      {
         name: "Marymoor Park Concerts",
         url: "https://www.marymoorlive.com/",
         parser: "configuredTodo",
@@ -113,6 +123,17 @@ function makeScoutRunResult(overrides: Partial<ScoutRunResult> = {}): ScoutRunRe
         matchedLabel: "tonight"
       },
       {
+        sourceName: "Easy Street Records",
+        parserName: "easyStreet",
+        ok: true,
+        fetchStatus: "fetched",
+        message: "parser TODO",
+        candidateCount: 0,
+        matchedCount: 0,
+        matchedLabel: "tonight",
+        parserConfidence: "Low"
+      },
+      {
         sourceName: "Marymoor Park Concerts",
         parserName: "configuredTodo",
         ok: true,
@@ -162,7 +183,7 @@ test("verification email uses readable email-style text sections", () => {
   assert.match(report.text, /### Sample Trio/);
   assert.match(report.text, /- Status: OK/);
   assert.match(report.text, /- Live parsed sources feeding emails: 1/);
-  assert.match(report.text, /- Tracked venue sources not feeding emails: 1/);
+  assert.match(report.text, /- Tracked venue sources not feeding emails: 2/);
   assert.match(report.text, /- Tier note: Top curated section\./);
   assert.match(report.text, /- Source health: The Royal Room fetched, High confidence/);
   assert.match(report.text, /- Recommendation: Go/);
@@ -187,6 +208,10 @@ test("verification email reports tracked sources that are not feeding emails", (
 
   assert.match(report.text, /### Tracked but not feeding emails/);
   assert.match(report.text, /Slim's Last Chance — Not feeding emails — tracked, not parsed yet; reliable parser not implemented yet/);
+  assert.match(
+    report.text,
+    /Easy Street Records — Not feeding emails — fetched, 0 parsed, 0 tonight; official events page blocks first-pass fetch; needs a better official source or manual-events fallback/
+  );
   assert.match(report.text, /### Seasonal \/ future parser sources/);
   assert.match(report.text, /Marymoor Park Concerts — Seasonal TODO — tracked, not parsed yet; seasonal; seasonal outdoor parser not built yet/);
   assert.match(report.text, /### Large venue gaps/);

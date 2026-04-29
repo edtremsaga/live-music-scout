@@ -6,8 +6,8 @@ export function parseEasyStreet(html: string, _context: ParserContext): ParserRe
     candidateCount: 0,
     parserConfidence: "Low",
     statusMessage:
-      html.includes("JavaScript is disabled")
-        ? "parser TODO: Easy Street Records events page is JS-gated and anti-bot protected in the first-pass fetch path"
-        : "parser TODO: Easy Street Records events page appears JS-gated, so the first-pass parser intentionally skips it."
+      html.includes("CloudFront") || html.includes("403 ERROR") || html.includes("Request blocked")
+        ? "parser TODO: Easy Street Records official events page returned CloudFront 403 in the first-pass fetch path; no reliable public parser source is configured"
+        : "parser TODO: Easy Street Records events page does not expose reliable first-pass public event data, so the parser intentionally skips it."
   };
 }

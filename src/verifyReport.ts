@@ -211,10 +211,14 @@ function summarizeSourceNote(source: SourceConfig): string | undefined {
 
   if (!note) {
     if (source.name === "Easy Street Records") {
-      return "JS-gated events page needs a better parser path";
+      return "official events page blocks first-pass fetch; needs a better official source or manual-events fallback";
     }
 
     return undefined;
+  }
+
+  if (/CloudFront 403/i.test(note) && /manual-events fallback/i.test(note)) {
+    return "official events page blocks first-pass fetch; needs a better official source or manual-events fallback";
   }
 
   if (/Cloudflare challenge/i.test(note)) {
