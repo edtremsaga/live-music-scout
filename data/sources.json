@@ -190,14 +190,14 @@
   },
   {
     "name": "SeaMonster Lounge",
-    "url": "https://www.seamonsterlounge.com/calendar",
-    "parser": "configuredTodo",
+    "url": "https://www.seamonsterlounge.com/",
+    "parser": "seaMonster",
     "location": "Seattle, WA",
     "areaTags": ["Seattle", "Wallingford"],
     "sourceType": "venue",
     "musicOnly": true,
-    "parserStatus": "todo",
-    "notes": "parser TODO: SeaMonster Lounge is configured as a year-round Seattle live-music source, but the old calendar URL currently returns 404 and needs a better source URL/feed"
+    "parserStatus": "live",
+    "notes": "Live parser uses official public Wix Events listings embedded on the SeaMonster Lounge homepage"
   },
   {
     "name": "Easy Street Records",

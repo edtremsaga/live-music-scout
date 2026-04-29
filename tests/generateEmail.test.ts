@@ -146,6 +146,16 @@ test("Slim's Last Chance VenuePilot URL gets Slim's event page label", () => {
   assert.equal(getSourceLinkLabel(event), "Slim's Last Chance event page");
 });
 
+test("SeaMonster Lounge URL gets SeaMonster event page label", () => {
+  const event = makeRankedEvent({
+    sourceName: "SeaMonster Lounge",
+    venue: "SeaMonster Lounge",
+    url: "https://www.seamonsterlounge.com/event-info/suffering-yuckheads-2026-04-29-19-30"
+  });
+
+  assert.equal(getSourceLinkLabel(event), "SeaMonster Lounge event page");
+});
+
 test("fallback URL gets Event page label", () => {
   const event = makeRankedEvent({
     url: "https://example.com/events/test"
@@ -188,6 +198,21 @@ test("generic daily why-line keeps tonight wording", () => {
   const output = generateEmailPreview(new Date("2026-04-25T19:00:00-07:00"), [event]);
 
   assert.match(output, /Why it looks good: Looks like a plausible live-music option for tonight/);
+});
+
+test("SeaMonster highlights use venue-specific why-line wording", () => {
+  const event = makeRankedEvent({
+    title: "Suffering Yuckheads",
+    sourceName: "SeaMonster Lounge",
+    venue: "SeaMonster Lounge",
+    date: "2026-04-29",
+    time: "7:30 PM",
+    url: "https://www.seamonsterlounge.com/event-info/suffering-yuckheads-2026-04-29-19-30"
+  });
+
+  const output = generateEmailPreview(new Date("2026-04-29T12:00:00-07:00"), [event]);
+
+  assert.match(output, /Why it looks good: A SeaMonster Lounge club set with Wallingford funk, soul, jazz, and improv energy/);
 });
 
 test("generic weekly why-line uses this-week wording", () => {
@@ -294,6 +319,60 @@ test("daily preview separates Go highlights from Maybe also-worth-checking items
   assert.match(evaluatedSection, /The Quilt Sessions: April/);
   assert.doesNotMatch(evaluatedSection, /Alice Phoebe Lou/);
   assert.doesNotMatch(evaluatedSection, /Helloween/);
+});
+
+test("daily top sections apply light venue caps when one venue has many high-scoring events", () => {
+  const seaMonsterOne = makeRankedEvent({
+    id: "sea-one",
+    title: "SeaMonster One",
+    artist: "SeaMonster One",
+    venue: "SeaMonster Lounge",
+    sourceName: "SeaMonster Lounge",
+    url: "https://www.seamonsterlounge.com/event-info/one",
+    score: 30,
+    verdict: "Go"
+  });
+  const seaMonsterTwo = makeRankedEvent({
+    id: "sea-two",
+    title: "SeaMonster Two",
+    artist: "SeaMonster Two",
+    venue: "SeaMonster Lounge",
+    sourceName: "SeaMonster Lounge",
+    url: "https://www.seamonsterlounge.com/event-info/two",
+    score: 29,
+    verdict: "Go"
+  });
+  const seaMonsterThree = makeRankedEvent({
+    id: "sea-three",
+    title: "SeaMonster Three",
+    artist: "SeaMonster Three",
+    venue: "SeaMonster Lounge",
+    sourceName: "SeaMonster Lounge",
+    url: "https://www.seamonsterlounge.com/event-info/three",
+    score: 28,
+    verdict: "Go"
+  });
+  const tractor = makeRankedEvent({
+    id: "tractor",
+    title: "Tractor Pick",
+    artist: "Tractor Pick",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/tractor",
+    score: 18,
+    verdict: "Go"
+  });
+
+  const output = generateEmailPreview(
+    new Date("2026-04-29T12:00:00-07:00"),
+    [seaMonsterOne, seaMonsterTwo, seaMonsterThree, tractor]
+  );
+  const highlightsSection = output.slice(output.indexOf("## Tonight’s Highlights"), output.indexOf("## All Evaluated Shows"));
+
+  assert.match(highlightsSection, /### SeaMonster One/);
+  assert.match(highlightsSection, /### SeaMonster Two/);
+  assert.doesNotMatch(highlightsSection, /### SeaMonster Three/);
+  assert.match(highlightsSection, /### Tractor Pick/);
 });
 
 test("daily html includes Also Worth Checking when Maybe items are present", () => {
@@ -743,6 +822,44 @@ test("weekly highlights apply a light venue diversity cap when alternatives exis
   assert.match(highlightsSection, /### Tractor Two/);
   assert.doesNotMatch(highlightsSection, /### Tractor Three/);
   assert.match(highlightsSection, /### Pat Metheny Side-Eye III\+/);
+});
+
+test("weekly top sections apply combined venue caps across highlights and also worth a look", () => {
+  const seaMonsterEvents = Array.from({ length: 6 }, (_, index) => makeRankedEvent({
+    id: `sea-${index + 1}`,
+    title: `SeaMonster Pick ${index + 1}`,
+    artist: `SeaMonster Pick ${index + 1}`,
+    venue: "SeaMonster Lounge",
+    sourceName: "SeaMonster Lounge",
+    url: `https://www.seamonsterlounge.com/event-info/pick-${index + 1}`,
+    date: `2026-05-0${index + 1}`,
+    score: 40 - index,
+    verdict: "Go"
+  }));
+  const otherVenueEvents = ["Tractor Tavern", "The Royal Room", "Skylark Cafe", "Bake's Place"].map((venue, index) => makeRankedEvent({
+    id: `other-${index + 1}`,
+    title: `${venue} Pick`,
+    artist: `${venue} Pick`,
+    venue,
+    sourceName: venue,
+    url: `https://example.com/${index + 1}`,
+    date: `2026-05-0${index + 1}`,
+    score: 20 - index,
+    verdict: "Go"
+  }));
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-04-29T12:00:00-07:00"),
+    [...seaMonsterEvents, ...otherVenueEvents],
+    "2026-04-29",
+    "2026-05-06"
+  );
+  const topSections = output.slice(output.indexOf("## This Week’s Highlights"), output.indexOf("## Evaluated Shows by Day"));
+  const seaMonsterTopSectionCount = (topSections.match(/### SeaMonster Pick/g) ?? []).length;
+
+  assert.equal(seaMonsterTopSectionCount, 3);
+  assert.match(topSections, /### Tractor Tavern Pick/);
+  assert.match(topSections, /### The Royal Room Pick/);
 });
 
 test("grouped multi-night strong run can beat a generic one-off weekly highlight", () => {

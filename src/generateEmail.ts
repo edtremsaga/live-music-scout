@@ -10,10 +10,16 @@ export type WeeklyHighlightGroup = {
 
 const MAX_WEEKLY_HIGHLIGHTS = 6;
 const MAX_WEEKLY_ALSO_WORTH = 6;
+const MAX_DAILY_HIGHLIGHTS_PER_VENUE = 2;
+const MAX_DAILY_HIGHLIGHTS_PER_SOURCE = 2;
+const MAX_DAILY_ALSO_WORTH_PER_VENUE = 2;
+const MAX_DAILY_ALSO_WORTH_PER_SOURCE = 2;
 const MAX_WEEKLY_ALSO_WORTH_PER_VENUE = 2;
 const MAX_WEEKLY_ALSO_WORTH_PER_SOURCE = 2;
 const MAX_WEEKLY_HIGHLIGHTS_PER_VENUE = 2;
 const MAX_WEEKLY_HIGHLIGHTS_PER_SOURCE = 2;
+const MAX_WEEKLY_TOP_SECTIONS_PER_VENUE = 3;
+const MAX_WEEKLY_TOP_SECTIONS_PER_SOURCE = 3;
 const WEEKLY_DIVERSITY_OVERRIDE_GAP = 1;
 
 function escapeHtml(value: string): string {
@@ -114,6 +120,10 @@ export function getSourceLinkLabel(event: Pick<RankedEvent, "url" | "sourceName"
     return "Slim's Last Chance event page";
   }
 
+  if (event.venue === "SeaMonster Lounge" || event.sourceName === "SeaMonster Lounge" || url.includes("seamonsterlounge.com")) {
+    return "SeaMonster Lounge event page";
+  }
+
   if (event.sourceName === "STG Presents" || url.includes("stgpresents.org")) {
     return "STG event page";
   }
@@ -182,6 +192,10 @@ function buildWhyLine(event: RankedEvent, timeframe = "tonight"): string {
 
   if (event.venue === "Skylark Cafe") {
     return "A local-band Skylark night with strong West Seattle club energy — a good option if you want something smaller, scrappier, and close to the neighborhood scene.";
+  }
+
+  if (event.venue === "SeaMonster Lounge") {
+    return "A SeaMonster Lounge club set with Wallingford funk, soul, jazz, and improv energy — a strong option if you want a neighborhood room built around musicians.";
   }
 
   if (event.sourceName === "STG Presents") {
@@ -349,6 +363,45 @@ function renderHighlightHtml(event: RankedEvent): string {
   return items.join("");
 }
 
+function takeWithDiversityCap<T>(
+  candidates: T[],
+  selected: T[],
+  maxItems: number,
+  getVenue: (item: T) => string,
+  getSource: (item: T) => string,
+  maxPerVenue: number,
+  maxPerSource: number
+): T[] {
+  const results: T[] = [];
+  const allItems = [...selected, ...candidates];
+  const venueDiversityPossible = new Set(allItems.map((item) => publicText(getVenue(item)))).size > 1;
+  const sourceDiversityPossible = new Set(allItems.map((item) => publicText(getSource(item)))).size > 1;
+
+  for (const candidate of candidates) {
+    if (results.length >= maxItems) {
+      break;
+    }
+
+    const combined = [...selected, ...results];
+    const venueCounts = countBy(combined, (item) => publicText(getVenue(item)));
+    const sourceCounts = countBy(combined, (item) => publicText(getSource(item)));
+    const venueKey = publicText(getVenue(candidate));
+    const sourceKey = publicText(getSource(candidate));
+
+    if (venueDiversityPossible && (venueCounts.get(venueKey) ?? 0) >= maxPerVenue) {
+      continue;
+    }
+
+    if (sourceDiversityPossible && (sourceCounts.get(sourceKey) ?? 0) >= maxPerSource) {
+      continue;
+    }
+
+    results.push(candidate);
+  }
+
+  return results;
+}
+
 export function selectEmailSections(rankedEvents: RankedEvent[]): {
   highlights: RankedEvent[];
   alsoWorthChecking: RankedEvent[];
@@ -360,21 +413,46 @@ export function selectEmailSections(rankedEvents: RankedEvent[]): {
       && event.classification.isLikelyMusic
       && !hasEventStatusIssue(event)
   );
-  const highlights = highlightCandidates.slice(0, 3);
-  const fourthCandidate = highlightCandidates[3];
+  const highlights = takeWithDiversityCap(
+    highlightCandidates,
+    [],
+    3,
+    (event) => event.venue,
+    (event) => event.sourceName,
+    MAX_DAILY_HIGHLIGHTS_PER_VENUE,
+    MAX_DAILY_HIGHLIGHTS_PER_SOURCE
+  );
+  const shownHighlightIds = new Set(highlights.map((event) => event.id));
+  const fourthCandidate = highlightCandidates.find((event) => !shownHighlightIds.has(event.id));
 
   if (fourthCandidate && fourthCandidate.score >= 12) {
-    highlights.push(fourthCandidate);
+    const cappedFourth = takeWithDiversityCap(
+      [fourthCandidate],
+      highlights,
+      1,
+      (event) => event.venue,
+      (event) => event.sourceName,
+      MAX_DAILY_HIGHLIGHTS_PER_VENUE,
+      MAX_DAILY_HIGHLIGHTS_PER_SOURCE
+    );
+    highlights.push(...cappedFourth);
   }
 
-  const alsoWorthChecking = rankedEvents
-    .filter(
-      (event) =>
-        event.verdict === "Maybe"
-        && event.classification.isLikelyMusic
-        && !hasEventStatusIssue(event)
-    )
-    .slice(0, 5);
+  const alsoWorthCheckingCandidates = rankedEvents.filter(
+    (event) =>
+      event.verdict === "Maybe"
+      && event.classification.isLikelyMusic
+      && !hasEventStatusIssue(event)
+  );
+  const alsoWorthChecking = takeWithDiversityCap(
+    alsoWorthCheckingCandidates,
+    highlights,
+    5,
+    (event) => event.venue,
+    (event) => event.sourceName,
+    MAX_DAILY_ALSO_WORTH_PER_VENUE,
+    MAX_DAILY_ALSO_WORTH_PER_SOURCE
+  );
   const shownIds = new Set([...highlights, ...alsoWorthChecking].map((event) => event.id));
   const remaining = rankedEvents.filter((event) => !shownIds.has(event.id));
 
@@ -667,12 +745,16 @@ export function selectWeeklyEmailSections(rankedEvents: RankedEvent[]): {
 
     const venueCounts = countBy(alsoWorthALook, (item) => publicText(item.representative.venue));
     const sourceCounts = countBy(alsoWorthALook, (item) => publicText(item.representative.sourceName));
+    const combinedVenueCounts = countBy([...highlights, ...alsoWorthALook], (item) => publicText(item.representative.venue));
+    const combinedSourceCounts = countBy([...highlights, ...alsoWorthALook], (item) => publicText(item.representative.sourceName));
     const venueKey = publicText(group.representative.venue);
     const sourceKey = publicText(group.representative.sourceName);
 
     if (
       (venueCounts.get(venueKey) ?? 0) >= MAX_WEEKLY_ALSO_WORTH_PER_VENUE
       || (sourceCounts.get(sourceKey) ?? 0) >= MAX_WEEKLY_ALSO_WORTH_PER_SOURCE
+      || (combinedVenueCounts.get(venueKey) ?? 0) >= MAX_WEEKLY_TOP_SECTIONS_PER_VENUE
+      || (combinedSourceCounts.get(sourceKey) ?? 0) >= MAX_WEEKLY_TOP_SECTIONS_PER_SOURCE
     ) {
       continue;
     }
