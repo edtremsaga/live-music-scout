@@ -105,16 +105,16 @@ test("SeaMonster Lounge is configured as an honest TODO live-music venue source"
   assert.match(seaMonster.notes ?? "", /calendar URL currently returns 404/i);
 });
 
-test("El Corazon is configured as an honest TODO live-music venue source", () => {
+test("El Corazon is configured as a live parsed venue source", () => {
   const sources = loadSources();
   const elCorazon = sources.find((source) => source.name === "El Corazon");
 
   assert.ok(elCorazon);
-  assert.equal(elCorazon.parser, "configuredTodo");
-  assert.equal(elCorazon.parserStatus, "todo");
+  assert.equal(elCorazon.parser, "elCorazon");
+  assert.equal(elCorazon.parserStatus, "live");
   assert.equal(elCorazon.sourceType, "venue");
   assert.equal(elCorazon.musicOnly, true);
-  assert.match(elCorazon.notes ?? "", /reliable parser is not implemented yet/i);
+  assert.match(elCorazon.notes ?? "", /public Webflow event cards/i);
 });
 
 test("Slim's Last Chance is configured as an honest TODO live-music venue source", () => {

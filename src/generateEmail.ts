@@ -106,6 +106,10 @@ export function getSourceLinkLabel(event: Pick<RankedEvent, "url" | "sourceName"
     return "Sunset Tavern event page";
   }
 
+  if (event.sourceName === "El Corazon" || url.includes("elcorazonseattle.com")) {
+    return "El Corazon/Funhouse event page";
+  }
+
   if (event.sourceName === "STG Presents" || url.includes("stgpresents.org")) {
     return "STG event page";
   }
@@ -133,7 +137,7 @@ function formatVerdict(verdict: RankedEvent["verdict"]): string {
   return "Skip — probably not the kind of live music night this scout is looking for.";
 }
 
-function buildWhyLine(event: RankedEvent): string {
+function buildWhyLine(event: RankedEvent, timeframe = "tonight"): string {
   const titleLower = publicText(event.title).toLowerCase();
 
   if (event.venue === "Tractor Tavern") {
@@ -182,7 +186,7 @@ function buildWhyLine(event: RankedEvent): string {
       : "A bigger-room concert option. Worth checking only if the artist already appeals to you.";
   }
 
-  return "Looks like a plausible live-music option for tonight, but probably worth a quick spot-check before heading out.";
+  return `Looks like a plausible live-music option for ${timeframe}, but probably worth a quick spot-check before heading out.`;
 }
 
 function buildSkipReason(event: RankedEvent): string {
@@ -532,7 +536,7 @@ function renderWeeklyHighlight(group: WeeklyHighlightGroup): string {
     times ? `- ${dates.length === 1 ? "Time" : "Times"}: ${times}` : undefined,
     `- Location: ${location}`,
     availability ? `- Availability: ${availability}` : undefined,
-    `- Why it looks good: ${publicText(buildWhyLine(representative))}`,
+    `- Why it looks good: ${publicText(buildWhyLine(representative, "this week"))}`,
     `- My take: ${publicText(buildWeeklyGroupTake(group))}`,
     `- Source: ${formatSourceLinkMarkdown(representative)}`
   ]
@@ -558,7 +562,7 @@ function renderWeeklyHighlightHtml(group: WeeklyHighlightGroup): string {
     times ? `<li><strong>${dates.length === 1 ? "Time" : "Times"}:</strong> ${escapeHtml(times)}</li>` : undefined,
     `<li><strong>Location:</strong> ${escapeHtml(location)}</li>`,
     availability ? `<li><strong>Availability:</strong> ${escapeHtml(availability)}</li>` : undefined,
-    `<li><strong>Why it looks good:</strong> ${escapeHtml(publicText(buildWhyLine(representative)))}</li>`,
+    `<li><strong>Why it looks good:</strong> ${escapeHtml(publicText(buildWhyLine(representative, "this week")))}</li>`,
     `<li><strong>My take:</strong> ${escapeHtml(publicText(buildWeeklyGroupTake(group)))}</li>`,
     `<li><strong>Source:</strong> ${formatSourceLinkHtml(representative)}</li>`,
     "</ul>"

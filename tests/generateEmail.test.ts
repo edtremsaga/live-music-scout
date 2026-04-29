@@ -126,6 +126,16 @@ test("Sunset Tavern DICE URL gets Sunset Tavern event page label", () => {
   assert.equal(getSourceLinkLabel(event), "Sunset Tavern event page");
 });
 
+test("El Corazon URL gets El Corazon/Funhouse event page label", () => {
+  const event = makeRankedEvent({
+    sourceName: "El Corazon",
+    venue: "The Funhouse",
+    url: "https://www.elcorazonseattle.com/shows/example"
+  });
+
+  assert.equal(getSourceLinkLabel(event), "El Corazon/Funhouse event page");
+});
+
 test("fallback URL gets Event page label", () => {
   const event = makeRankedEvent({
     url: "https://example.com/events/test"
@@ -156,6 +166,36 @@ test("preview uses highlights and all evaluated sections", () => {
   const output = generateEmailPreview(new Date("2026-04-25T19:00:00-07:00"), [event]);
   assert.match(output, /## Tonight’s Highlights/);
   assert.match(output, /## All Evaluated Shows/);
+});
+
+test("generic daily why-line keeps tonight wording", () => {
+  const event = makeRankedEvent({
+    sourceName: "Sunset Tavern",
+    venue: "Sunset Tavern",
+    url: "https://link.dice.fm/example"
+  });
+
+  const output = generateEmailPreview(new Date("2026-04-25T19:00:00-07:00"), [event]);
+
+  assert.match(output, /Why it looks good: Looks like a plausible live-music option for tonight/);
+});
+
+test("generic weekly why-line uses this-week wording", () => {
+  const event = makeRankedEvent({
+    sourceName: "Sunset Tavern",
+    venue: "Sunset Tavern",
+    url: "https://link.dice.fm/example"
+  });
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-04-25T19:00:00-07:00"),
+    [event],
+    "2026-04-25",
+    "2026-05-02"
+  );
+
+  assert.match(output, /Why it looks good: Looks like a plausible live-music option for this week/);
+  assert.doesNotMatch(output, /Why it looks good: Looks like a plausible live-music option for tonight/);
 });
 
 test("daily preview separates Go highlights from Maybe also-worth-checking items", () => {

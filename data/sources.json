@@ -98,13 +98,13 @@
   {
     "name": "El Corazon",
     "url": "https://elcorazonseattle.com/",
-    "parser": "configuredTodo",
+    "parser": "elCorazon",
     "location": "Seattle, WA",
     "areaTags": ["Seattle", "Eastlake"],
     "sourceType": "venue",
     "musicOnly": true,
-    "parserStatus": "todo",
-    "notes": "parser TODO: El Corazon is configured as a year-round Seattle live-music club source, but a reliable parser is not implemented yet"
+    "parserStatus": "live",
+    "notes": "Live parser uses public Webflow event cards on the El Corazon / Funhouse homepage"
   },
   {
     "name": "Slim's Last Chance",

@@ -2,6 +2,7 @@ import type { SourceParser } from "../types.js";
 import { parseBakesPlace } from "./bakesPlace.js";
 import { parseConfiguredTodoSource } from "./configuredTodo.js";
 import { parseEasyStreet } from "./easyStreet.js";
+import { parseElCorazon } from "./elCorazon.js";
 import { parseJazzAlley } from "./jazzAlley.js";
 import { parseHiddenHall, parseNectar } from "./nectar.js";
 import { parseRoyalRoom } from "./royalRoom.js";
@@ -25,5 +26,6 @@ export const parsers: Record<string, SourceParser> = {
   skylark: parseSkylark,
   seaMonster: parseSeaMonster,
   easyStreet: parseEasyStreet,
+  elCorazon: parseElCorazon,
   stg: parseStg
 };
