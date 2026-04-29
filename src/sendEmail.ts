@@ -44,6 +44,7 @@ export async function sendEmail(params: {
   subject: string;
   text: string;
   html?: string;
+  to?: string;
 }): Promise<string> {
   const env = assertEmailEnv();
   const transporter = nodemailer.createTransport({
@@ -58,7 +59,7 @@ export async function sendEmail(params: {
 
   const response = await transporter.sendMail({
     from: env.emailFrom,
-    to: env.emailTo,
+    to: params.to ?? env.emailTo,
     subject: params.subject,
     text: params.text,
     html: params.html

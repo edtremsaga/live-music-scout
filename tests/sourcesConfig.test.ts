@@ -20,6 +20,7 @@ test("configured allowlist includes the new venue and seasonal sources", () => {
   assert.equal(names.has("Skylark Cafe"), true);
   assert.equal(names.has("Tim's Tavern"), true);
   assert.equal(names.has("El Corazon"), true);
+  assert.equal(names.has("Slim's Last Chance"), true);
   assert.equal(names.has("Remlinger Farms Summer Concerts"), true);
   assert.equal(names.has("Marymoor Park Concerts"), true);
   assert.equal(names.has("Chateau Ste. Michelle Summer Concerts"), true);
@@ -103,6 +104,20 @@ test("El Corazon is configured as an honest TODO live-music venue source", () =>
   assert.equal(elCorazon.sourceType, "venue");
   assert.equal(elCorazon.musicOnly, true);
   assert.match(elCorazon.notes ?? "", /reliable parser is not implemented yet/i);
+});
+
+test("Slim's Last Chance is configured as an honest TODO live-music venue source", () => {
+  const sources = loadSources();
+  const slims = sources.find((source) => source.name === "Slim's Last Chance");
+
+  assert.ok(slims);
+  assert.equal(slims.url, "https://www.slimslastchance.com/shows");
+  assert.equal(slims.parser, "configuredTodo");
+  assert.equal(slims.parserStatus, "todo");
+  assert.equal(slims.sourceType, "venue");
+  assert.equal(slims.musicOnly, true);
+  assert.equal(slims.areaTags?.includes("Georgetown"), true);
+  assert.match(slims.notes ?? "", /reliable parser is not implemented yet/i);
 });
 
 test("STG stays a promoter source and absorbs Neptune and Moore coverage without duplicate sources", () => {

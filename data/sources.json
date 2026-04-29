@@ -106,6 +106,17 @@
     "notes": "parser TODO: El Corazon is configured as a year-round Seattle live-music club source, but a reliable parser is not implemented yet"
   },
   {
+    "name": "Slim's Last Chance",
+    "url": "https://www.slimslastchance.com/shows",
+    "parser": "configuredTodo",
+    "location": "Seattle, WA",
+    "areaTags": ["Seattle", "Georgetown"],
+    "sourceType": "venue",
+    "musicOnly": true,
+    "parserStatus": "todo",
+    "notes": "parser TODO: Slim's Last Chance is configured as a year-round Georgetown live-music club source, but a reliable parser is not implemented yet"
+  },
+  {
     "name": "Remlinger Farms Summer Concerts",
     "url": "https://remlingerfarms.com/remlinger-summer-concerts/",
     "parser": "configuredTodo",

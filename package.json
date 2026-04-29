@@ -5,8 +5,10 @@
   "description": "Local TypeScript CLI for scouting Seattle-area live music tonight.",
   "scripts": {
     "scout": "node --import tsx src/index.ts",
+    "scout:verify": "node --import tsx src/scoutVerify.ts",
     "scout:email": "node --import tsx src/scoutEmail.ts",
     "scout:week": "node --import tsx src/scoutWeek.ts",
+    "scout:week:verify": "node --import tsx src/scoutWeekVerify.ts",
     "scout:week:email": "node --import tsx src/scoutWeekEmail.ts",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/**/*.test.ts"
