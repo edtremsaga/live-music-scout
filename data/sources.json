@@ -17,7 +17,8 @@
     "areaTags": ["Seattle", "Ballard"],
     "sourceType": "venue",
     "musicOnly": true,
-    "parserStatus": "todo"
+    "parserStatus": "live",
+    "notes": "Live parser uses the public DICE event widget embedded on Sunset Tavern's shows page"
   },
   {
     "name": "The Royal Room",

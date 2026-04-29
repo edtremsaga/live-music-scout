@@ -116,6 +116,16 @@ test("Skylark Cafe URL gets Skylark Cafe event page label", () => {
   assert.equal(getSourceLinkLabel(event), "Skylark Cafe event page");
 });
 
+test("Sunset Tavern DICE URL gets Sunset Tavern event page label", () => {
+  const event = makeRankedEvent({
+    sourceName: "Sunset Tavern",
+    venue: "Sunset Tavern",
+    url: "https://link.dice.fm/example"
+  });
+
+  assert.equal(getSourceLinkLabel(event), "Sunset Tavern event page");
+});
+
 test("fallback URL gets Event page label", () => {
   const event = makeRankedEvent({
     url: "https://example.com/events/test"

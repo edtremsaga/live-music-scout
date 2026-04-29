@@ -102,6 +102,10 @@ export function getSourceLinkLabel(event: Pick<RankedEvent, "url" | "sourceName"
     return "Skylark Cafe event page";
   }
 
+  if (event.venue === "Sunset Tavern" || event.sourceName === "Sunset Tavern" || url.includes("dice.fm")) {
+    return "Sunset Tavern event page";
+  }
+
   if (event.sourceName === "STG Presents" || url.includes("stgpresents.org")) {
     return "STG event page";
   }

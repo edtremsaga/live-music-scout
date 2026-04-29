@@ -48,6 +48,17 @@ test("Bake's Place is configured as a live parsed venue source", () => {
   assert.equal(bakesPlace.musicOnly, true);
 });
 
+test("Sunset Tavern is configured as a live parsed venue source", () => {
+  const sources = loadSources();
+  const sunset = sources.find((source) => source.name === "Sunset Tavern");
+
+  assert.ok(sunset);
+  assert.equal(sunset.parser, "sunset");
+  assert.equal(sunset.parserStatus, "live");
+  assert.equal(sunset.musicOnly, true);
+  assert.match(sunset.notes ?? "", /DICE event widget/i);
+});
+
 test("Nectar Lounge, Hidden Hall, and Skylark Cafe are configured as live parsed venue sources", () => {
   const sources = loadSources();
   const nectar = sources.find((source) => source.name === "Nectar Lounge");
