@@ -28,6 +28,7 @@ type VerificationReportModel = {
   items: VerificationItem[];
   warningCount: number;
   sourceSummary: string[];
+  coverageSummary: string[];
   coverageGapSections: CoverageGapSection[];
   noteLines: string[];
 };
@@ -205,40 +206,91 @@ function formatSourceSummary(statuses: SourceRunStatus[]): string[] {
   return lines;
 }
 
+function summarizeSourceNote(source: SourceConfig): string | undefined {
+  const note = source.notes?.replace(/^parser TODO:\s*/i, "");
+
+  if (!note) {
+    if (source.name === "Easy Street Records") {
+      return "JS-gated events page needs a better parser path";
+    }
+
+    return undefined;
+  }
+
+  if (/Cloudflare challenge/i.test(note)) {
+    return "blocked by Cloudflare";
+  }
+
+  if (/old calendar URL currently returns 404/i.test(note)) {
+    return "needs a better source URL/feed";
+  }
+
+  if (/overlap with STG/i.test(note)) {
+    return "needs parser plus STG dedupe";
+  }
+
+  if (/sports and non-music/i.test(note)) {
+    return "needs music-only filtering";
+  }
+
+  if (/outdoor summer music series/i.test(note)) {
+    return "seasonal outdoor parser not built yet";
+  }
+
+  if (/reliable parser is not implemented yet/i.test(note)) {
+    return "reliable parser not implemented yet";
+  }
+
+  return note;
+}
+
+function formatCoverageStatus(source: SourceConfig, status: SourceRunStatus | undefined): string {
+  if (status?.fetchStatus === "failed") {
+    return "Failed this run";
+  }
+
+  if (source.sourceType === "seasonal_outdoor") {
+    return "Seasonal TODO";
+  }
+
+  if (source.sourceType === "large_venue") {
+    return "Large venue TODO";
+  }
+
+  if (source.parserStatus === "todo" || source.parser === "configuredTodo") {
+    return "Not feeding emails";
+  }
+
+  return status?.fetchStatus ?? "Not feeding emails";
+}
+
 function formatCoverageDetail(source: SourceConfig, status: SourceRunStatus | undefined): string {
   const pieces: string[] = [];
 
-  if (source.parserStatus === "todo" || source.parser === "configuredTodo") {
-    pieces.push("parser TODO");
-  }
-
   if (status?.fetchStatus === "skipped") {
-    pieces.push("skipped by configured TODO parser");
+    pieces.push("tracked, not parsed yet");
   } else if (status?.fetchStatus === "failed") {
     pieces.push("fetch/parse failed this run");
-  } else if (status && source.parserStatus === "todo") {
-    pieces.push(`${status.candidateCount} parsed, ${status.matchedCount} ${status.matchedLabel}`);
+  } else if (status) {
+    pieces.push(`fetched, ${status.candidateCount} parsed, ${status.matchedCount} ${status.matchedLabel}`);
   }
 
   if (source.seasonal) {
-    pieces.push("seasonal source");
+    pieces.push("seasonal");
   }
 
-  if (source.notes) {
-    pieces.push(source.notes.replace(/^parser TODO:\s*/i, ""));
+  const noteSummary = summarizeSourceNote(source);
+  if (noteSummary) {
+    pieces.push(noteSummary);
   }
 
   return pieces.length > 0 ? pieces.join("; ") : "configured source is not currently feeding email events";
 }
 
 function makeCoverageGap(source: SourceConfig, status: SourceRunStatus | undefined): CoverageGap {
-  const statusText = status
-    ? `${status.fetchStatus}${status.parserConfidence ? `, ${status.parserConfidence} confidence` : ""}`
-    : "not run";
-
   return {
     name: source.name,
-    status: statusText,
+    status: formatCoverageStatus(source, status),
     detail: formatCoverageDetail(source, status)
   };
 }
@@ -274,6 +326,19 @@ function buildCoverageGapSections(result: ScoutRunResult): CoverageGapSection[] 
   ].filter((section) => section.gaps.length > 0);
 }
 
+function formatCoverageSummary(result: ScoutRunResult, coverageGapSections: CoverageGapSection[]): string[] {
+  const getGapCount = (title: string): number =>
+    coverageGapSections.find((section) => section.title === title)?.gaps.length ?? 0;
+  const liveFeedingCount = result.statuses.filter((status) => status.fetchStatus === "fetched" && status.matchedCount > 0).length;
+
+  return [
+    `Live parsed sources feeding emails: ${liveFeedingCount}`,
+    `Tracked venue sources not feeding emails: ${getGapCount("Tracked but not feeding emails")}`,
+    `Seasonal/future parser sources: ${getGapCount("Seasonal / future parser sources")}`,
+    `Large venue gaps: ${getGapCount("Large venue gaps")}`
+  ];
+}
+
 function getVerificationSubject(result: ScoutRunResult): string {
   return result.reportKind === "week"
     ? "Live Music Scout Verification — This Week around Seattle/Bellevue"
@@ -283,6 +348,7 @@ function getVerificationSubject(result: ScoutRunResult): string {
 function buildVerificationReportModel(result: ScoutRunResult): VerificationReportModel {
   const items = collectVerificationItems(result);
   const warningCount = items.reduce((count, item) => count + item.warnings.length, 0);
+  const coverageGapSections = buildCoverageGapSections(result);
   const dateLine = result.reportKind === "week"
     ? `Date range: ${formatDateRangeLong(result.startKey, result.endKey)}`
     : `Date: ${formatTonightLong(result.generatedAt)}`;
@@ -293,7 +359,8 @@ function buildVerificationReportModel(result: ScoutRunResult): VerificationRepor
     items,
     warningCount,
     sourceSummary: formatSourceSummary(result.statuses),
-    coverageGapSections: buildCoverageGapSections(result),
+    coverageSummary: formatCoverageSummary(result, coverageGapSections),
+    coverageGapSections,
     noteLines: [
       "This verifies pipeline consistency, required fields, parser/source health, and status-warning signals.",
       "It does not re-fetch every individual event detail page; use the Source links for final human spot-checks before sending."
@@ -311,6 +378,7 @@ export function generatePreSendVerificationReport(result: ScoutRunResult): strin
     "## Summary",
     `- Top-section items: ${report.items.length}`,
     `- Warnings: ${report.warningCount}`,
+    ...report.coverageSummary.map((line) => `- ${line}`),
     "",
     "## Source Health",
     ...report.sourceSummary.map((line) => `- ${line}`),
@@ -348,15 +416,20 @@ export function generatePreSendVerificationReport(result: ScoutRunResult): strin
     const sourceText = item.sourceFetchStatus
       ? `${item.sourceName} ${item.sourceFetchStatus}${item.parserConfidence ? `, ${item.parserConfidence} confidence` : ""}`
       : item.sourceName;
+    const tierNote = item.section.includes("Highlights")
+      ? "Top curated section."
+      : "Secondary curation section; top picks are capped and lightly diversified.";
 
     lines.push(`### ${item.title}`);
     lines.push(`- Status: ${status}`);
+    lines.push(`- Tier note: ${tierNote}`);
     lines.push(`- Venue: ${item.venue}`);
     lines.push(`- Date${item.dates.length === 1 ? "" : "s"}: ${formatDates(item.dates)}`);
     lines.push(`- Time${item.times.length === 1 ? "" : "s"}: ${timeText}`);
     lines.push(`- Source health: ${sourceText}`);
     lines.push(`- Classification: ${item.classification.eventType}, ${item.classification.musicConfidence} confidence`);
-    lines.push(`- Verdict / score: ${item.verdict} / ${item.score}`);
+    lines.push(`- Recommendation: ${item.verdict}`);
+    lines.push(`- Internal score: ${item.score}`);
     lines.push(`- Link: ${item.url}`);
 
     if (item.warnings.length > 0) {
@@ -385,17 +458,22 @@ export function generatePreSendVerificationHtml(result: ScoutRunResult): string 
     const sourceText = item.sourceFetchStatus
       ? `${item.sourceName} ${item.sourceFetchStatus}${item.parserConfidence ? `, ${item.parserConfidence} confidence` : ""}`
       : item.sourceName;
+    const tierNote = item.section.includes("Highlights")
+      ? "Top curated section."
+      : "Secondary curation section; top picks are capped and lightly diversified.";
 
     return [
       `<h3>${escapeHtml(item.title)}</h3>`,
       "<ul>",
       `<li><strong>Status:</strong> ${escapeHtml(status)}</li>`,
+      `<li><strong>Tier note:</strong> ${escapeHtml(tierNote)}</li>`,
       `<li><strong>Venue:</strong> ${escapeHtml(item.venue)}</li>`,
       `<li><strong>Date${item.dates.length === 1 ? "" : "s"}:</strong> ${escapeHtml(formatDates(item.dates))}</li>`,
       `<li><strong>Time${item.times.length === 1 ? "" : "s"}:</strong> ${escapeHtml(timeText)}</li>`,
       `<li><strong>Source health:</strong> ${escapeHtml(sourceText)}</li>`,
       `<li><strong>Classification:</strong> ${escapeHtml(`${item.classification.eventType}, ${item.classification.musicConfidence} confidence`)}</li>`,
-      `<li><strong>Verdict / score:</strong> ${escapeHtml(`${item.verdict} / ${item.score}`)}</li>`,
+      `<li><strong>Recommendation:</strong> ${escapeHtml(item.verdict)}</li>`,
+      `<li><strong>Internal score:</strong> ${item.score}</li>`,
       `<li><strong>Link:</strong> <a href="${escapeHtml(item.url)}">${escapeHtml(item.url)}</a></li>`,
       item.warnings.length > 0
         ? `<li><strong>Warnings:</strong> ${escapeHtml(item.warnings.join("; "))}</li>`
@@ -413,6 +491,7 @@ export function generatePreSendVerificationHtml(result: ScoutRunResult): string 
     "<ul>",
     `<li><strong>Top-section items:</strong> ${report.items.length}</li>`,
     `<li><strong>Warnings:</strong> ${report.warningCount}</li>`,
+    report.coverageSummary.map((line) => `<li>${escapeHtml(line)}</li>`).join(""),
     "</ul>",
     "<h2>Source Health</h2>",
     `<ul>${report.sourceSummary.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`,

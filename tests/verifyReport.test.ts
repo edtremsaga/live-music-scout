@@ -161,7 +161,12 @@ test("verification email uses readable email-style text sections", () => {
   assert.match(report.text, /## Tonight's Highlights/);
   assert.match(report.text, /### Sample Trio/);
   assert.match(report.text, /- Status: OK/);
+  assert.match(report.text, /- Live parsed sources feeding emails: 1/);
+  assert.match(report.text, /- Tracked venue sources not feeding emails: 1/);
+  assert.match(report.text, /- Tier note: Top curated section\./);
   assert.match(report.text, /- Source health: The Royal Room fetched, High confidence/);
+  assert.match(report.text, /- Recommendation: Go/);
+  assert.match(report.text, /- Internal score: 12/);
 });
 
 test("verification email includes matching html report", () => {
@@ -173,19 +178,21 @@ test("verification email includes matching html report", () => {
   assert.match(report.html, /<h2>Tonight&#39;s Highlights<\/h2>/);
   assert.match(report.html, /<h3>Sample Trio<\/h3>/);
   assert.match(report.html, /<strong>Status:<\/strong> OK/);
+  assert.match(report.html, /<strong>Tier note:<\/strong> Top curated section\./);
+  assert.match(report.html, /<strong>Recommendation:<\/strong> Go/);
 });
 
 test("verification email reports tracked sources that are not feeding emails", () => {
   const report = generatePreSendVerificationEmail(makeScoutRunResult());
 
   assert.match(report.text, /### Tracked but not feeding emails/);
-  assert.match(report.text, /Slim's Last Chance — skipped — parser TODO; skipped by configured TODO parser/);
+  assert.match(report.text, /Slim's Last Chance — Not feeding emails — tracked, not parsed yet; reliable parser not implemented yet/);
   assert.match(report.text, /### Seasonal \/ future parser sources/);
-  assert.match(report.text, /Marymoor Park Concerts — skipped — parser TODO; skipped by configured TODO parser; seasonal source/);
+  assert.match(report.text, /Marymoor Park Concerts — Seasonal TODO — tracked, not parsed yet; seasonal; seasonal outdoor parser not built yet/);
   assert.match(report.text, /### Large venue gaps/);
-  assert.match(report.text, /Climate Pledge Arena — skipped — parser TODO; skipped by configured TODO parser/);
+  assert.match(report.text, /Climate Pledge Arena — Large venue TODO — tracked, not parsed yet; needs music-only filtering/);
   assert.match(report.text, /### Promoter coverage caveats/);
   assert.match(report.text, /STG Presents — fetched — feeds covered venues: The Paramount Theatre, The Neptune Theatre/);
   assert.match(report.html, /<h3>Tracked but not feeding emails<\/h3>/);
-  assert.match(report.html, /<strong>Slim&#39;s Last Chance:<\/strong> skipped/);
+  assert.match(report.html, /<strong>Slim&#39;s Last Chance:<\/strong> Not feeding emails/);
 });
