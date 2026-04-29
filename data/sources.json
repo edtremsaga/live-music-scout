@@ -109,13 +109,13 @@
   {
     "name": "Slim's Last Chance",
     "url": "https://www.slimslastchance.com/shows",
-    "parser": "configuredTodo",
+    "parser": "slims",
     "location": "Seattle, WA",
     "areaTags": ["Seattle", "Georgetown"],
     "sourceType": "venue",
     "musicOnly": true,
-    "parserStatus": "todo",
-    "notes": "parser TODO: Slim's Last Chance is configured as a year-round Georgetown live-music club source, but a reliable parser is not implemented yet"
+    "parserStatus": "live",
+    "notes": "Live parser uses the public VenuePilot event widget embedded on the Slim's Last Chance shows page"
   },
   {
     "name": "Remlinger Farms Summer Concerts",

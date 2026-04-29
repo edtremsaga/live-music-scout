@@ -110,6 +110,10 @@ export function getSourceLinkLabel(event: Pick<RankedEvent, "url" | "sourceName"
     return "El Corazon/Funhouse event page";
   }
 
+  if (event.venue === "Slim's Last Chance" || event.sourceName === "Slim's Last Chance" || url.includes("venuepilot.com")) {
+    return "Slim's Last Chance event page";
+  }
+
   if (event.sourceName === "STG Presents" || url.includes("stgpresents.org")) {
     return "STG event page";
   }

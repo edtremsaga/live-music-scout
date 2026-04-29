@@ -136,6 +136,16 @@ test("El Corazon URL gets El Corazon/Funhouse event page label", () => {
   assert.equal(getSourceLinkLabel(event), "El Corazon/Funhouse event page");
 });
 
+test("Slim's Last Chance VenuePilot URL gets Slim's event page label", () => {
+  const event = makeRankedEvent({
+    sourceName: "Slim's Last Chance",
+    venue: "Slim's Last Chance",
+    url: "https://tickets.venuepilot.com/e/example"
+  });
+
+  assert.equal(getSourceLinkLabel(event), "Slim's Last Chance event page");
+});
+
 test("fallback URL gets Event page label", () => {
   const event = makeRankedEvent({
     url: "https://example.com/events/test"

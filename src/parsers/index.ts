@@ -7,6 +7,7 @@ import { parseJazzAlley } from "./jazzAlley.js";
 import { parseHiddenHall, parseNectar } from "./nectar.js";
 import { parseRoyalRoom } from "./royalRoom.js";
 import { parseSeaMonster } from "./seaMonster.js";
+import { parseSlims } from "./slims.js";
 import { parseSkylark } from "./skylark.js";
 import { parseStg } from "./stg.js";
 import { parseSunset } from "./sunset.js";
@@ -27,5 +28,6 @@ export const parsers: Record<string, SourceParser> = {
   seaMonster: parseSeaMonster,
   easyStreet: parseEasyStreet,
   elCorazon: parseElCorazon,
+  slims: parseSlims,
   stg: parseStg
 };

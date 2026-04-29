@@ -117,18 +117,18 @@ test("El Corazon is configured as a live parsed venue source", () => {
   assert.match(elCorazon.notes ?? "", /public Webflow event cards/i);
 });
 
-test("Slim's Last Chance is configured as an honest TODO live-music venue source", () => {
+test("Slim's Last Chance is configured as a live parsed venue source", () => {
   const sources = loadSources();
   const slims = sources.find((source) => source.name === "Slim's Last Chance");
 
   assert.ok(slims);
   assert.equal(slims.url, "https://www.slimslastchance.com/shows");
-  assert.equal(slims.parser, "configuredTodo");
-  assert.equal(slims.parserStatus, "todo");
+  assert.equal(slims.parser, "slims");
+  assert.equal(slims.parserStatus, "live");
   assert.equal(slims.sourceType, "venue");
   assert.equal(slims.musicOnly, true);
   assert.equal(slims.areaTags?.includes("Georgetown"), true);
-  assert.match(slims.notes ?? "", /reliable parser is not implemented yet/i);
+  assert.match(slims.notes ?? "", /public VenuePilot event widget/i);
 });
 
 test("STG stays a promoter source and absorbs Neptune and Moore coverage without duplicate sources", () => {
