@@ -62,6 +62,26 @@ npm run scout:week:verify
 
 The verification-report commands may email real reports depending on configuration, so treat them as email-sending commands.
 
+## Resource-Saving Workflow
+
+Default to conserving Codex usage for this project.
+
+- Batch related implementation, verification, and commit work into one pass when the user asks for a concrete change.
+- Do not stop after each tiny step to ask what to do next when the next action is obvious from the Live Music Scout workflow.
+- Prefer one concise final report over repeated intermediate review loops.
+- Use Codex time for parser implementation, curation/ranking changes, tests, debugging failures, and unusual report findings.
+- Avoid spending Codex time re-reviewing normal daily or weekly verify reports when they have `Warnings: 0`, no failed sources, and the top-section items look plausible.
+- When the user pastes a routine report, summarize only material issues, anomalies, or recommended next actions. If nothing looks wrong, say so briefly.
+- For routine checks, encourage the user to run local commands and paste only failures or suspicious output.
+- When asked to commit parser or quality work, stage only relevant files, leave `data/seen-events.json` unstaged unless explicitly requested, commit with a focused message, and push only if the user asks for push.
+- Do not run preview or verification commands repeatedly unless a code change needs rechecking or the user explicitly requests another run.
+
+Preferred high-value task shape:
+
+```text
+Implement the requested parser or quality fix, run npm test/typecheck/scout/scout:week, commit if green, and report the result.
+```
+
 ## Worktree Notes
 
 The worktree may contain user or previous-agent changes. Do not revert unrelated changes. Before editing, check status and keep documentation-only tasks limited to documentation files.
