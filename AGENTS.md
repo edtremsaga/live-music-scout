@@ -8,6 +8,15 @@ These instructions apply to the Live Music Scout repository. Follow the existing
 
 Venue parser work is limited to public event-data parsing. Use only event data that is available through normal public page loading, static HTML, embedded structured data, documented public feeds, or clearly referenced public event widgets.
 
+When describing or planning venue parser work, use public-content wording:
+
+- "Inspect the public events page."
+- "Check whether event listings are present in static HTML, JSON-LD, RSS/ICS, or a documented public feed."
+- "Parse the public event rows/cards/feed."
+- "Leave the source as TODO if the public page is blocked, gated, or too brittle."
+
+Avoid security-sensitive wording for ordinary venue work. Do not describe tasks as request capture, endpoint discovery, API discovery, network reconnaissance, probing, enumeration, bypassing protections, reverse engineering, or traffic inspection. If the only way to get data would require those methods, stop and report that no safe public parser path is available.
+
 Do not:
 
 - Bypass access controls, login walls, Cloudflare or bot protections, rate limits, blocked resources, or other access restrictions.

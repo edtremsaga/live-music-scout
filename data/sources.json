@@ -167,6 +167,18 @@
     "notes": "Live parser reads public static concert blocks from the ZooTunes page"
   },
   {
+    "name": "The Gorge Amphitheatre Summer Concerts",
+    "url": "https://www.gorgeamphitheatre.com/shows",
+    "parser": "configuredTodo",
+    "location": "George, WA",
+    "areaTags": ["Central Washington", "George", "Outdoor"],
+    "sourceType": "seasonal_outdoor",
+    "musicOnly": true,
+    "seasonal": true,
+    "parserStatus": "todo",
+    "notes": "parser TODO: The official Gorge Amphitheatre / Live Nation public pages are tracked, but the normal HTML currently exposes venue chrome and loading shells rather than stable static event rows; use only official public sources if a reliable parser path appears"
+  },
+  {
     "name": "Climate Pledge Arena",
     "url": "https://climatepledgearena.com/",
     "parser": "configuredTodo",
@@ -209,6 +221,21 @@
     "musicOnly": true,
     "parserStatus": "todo",
     "notes": "parser TODO: Easy Street Records official events page currently returns CloudFront 403 in the first-pass fetch path; public third-party listings are not reliable enough for automated venue coverage, so this needs a better official source or a manual-events fallback"
+  },
+  {
+    "name": "KEXP Events",
+    "url": "https://www.kexp.org/events/",
+    "parser": "kexp",
+    "location": "Seattle, WA",
+    "areaTags": ["Seattle", "Lower Queen Anne"],
+    "sourceType": "promoter",
+    "musicOnly": true,
+    "coveredVenues": [
+      "KEXP Studio (NW Rooms)",
+      "Laser Dome at Pacific Science Center"
+    ],
+    "parserStatus": "live",
+    "notes": "Live parser reads public KEXP event rows and includes only public/in-person listings while skipping broadcast-only rows"
   },
   {
     "name": "STG Presents",

@@ -148,6 +148,19 @@ test("Kerry Hall workshop and audition STG listing stays out of likely music", (
   assert.match(classified.classification.exclusionReason ?? "", /workshop/);
 });
 
+test("KEXP public in-person event rows classify as music", () => {
+  const classified = classifyEvent(makeEvent({
+    title: "Diana Ratsamee of Eastern Echoes at The Laserdome",
+    venue: "Laser Dome at Pacific Science Center",
+    sourceName: "KEXP Events",
+    genreHints: ["concert", "live music", "KEXP public event"],
+    url: "https://www.kexp.org/events/kexp-events/diana-ratsamee-of-eastern-echoes-at-the-laserdome/"
+  }));
+
+  assert.equal(classified.classification.isLikelyMusic, true);
+  assert.equal(classified.classification.eventType, "music");
+});
+
 test("Royal Room specific music-looking titles classify as likely music", () => {
   const titles = [
     "Stillhouse Junkies",

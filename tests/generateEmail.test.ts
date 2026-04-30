@@ -186,6 +186,16 @@ test("ZooTunes URL gets ZooTunes event page label", () => {
   assert.equal(getSourceLinkLabel(event), "ZooTunes event page");
 });
 
+test("KEXP URL gets KEXP event page label", () => {
+  const event = makeRankedEvent({
+    sourceName: "KEXP Events",
+    venue: "KEXP Studio (NW Rooms)",
+    url: "https://www.kexp.org/events/kexp-events/cabaret-voltaire-live-on-kexp-kexp_481761/"
+  });
+
+  assert.equal(getSourceLinkLabel(event), "KEXP event page");
+});
+
 test("fallback URL gets Event page label", () => {
   const event = makeRankedEvent({
     url: "https://example.com/events/test"

@@ -243,6 +243,11 @@ export function classifyEvent(event: LiveMusicEvent): ClassifiedEvent {
     reasons.push("STG can include music, but it needs stronger title signals");
   }
 
+  if (event.sourceName === "KEXP Events") {
+    musicScore += 3;
+    reasons.push("KEXP public event rows are music-oriented when marked in-person");
+  }
+
   if (event.venue === "Nectar Lounge" || event.sourceName === "Nectar Lounge") {
     musicScore += 3;
     reasons.push("Nectar Lounge is a credible live-music source");

@@ -136,6 +136,10 @@ export function getSourceLinkLabel(event: Pick<RankedEvent, "url" | "sourceName"
     return "ZooTunes event page";
   }
 
+  if (event.sourceName === "KEXP Events" || url.includes("kexp.org/events")) {
+    return "KEXP event page";
+  }
+
   if (event.sourceName === "STG Presents" || url.includes("stgpresents.org")) {
     return "STG event page";
   }
@@ -216,6 +220,10 @@ function buildWhyLine(event: RankedEvent, timeframe = "tonight"): string {
 
   if (event.sourceName === "Woodland Park Zoo / ZooTunes") {
     return "A ZooTunes outdoor concert at Woodland Park Zoo — a good seasonal option if the artist already appeals to you.";
+  }
+
+  if (event.sourceName === "KEXP Events") {
+    return "A public KEXP music event — worth a look if you want an in-studio or community-minded Seattle music experience.";
   }
 
   if (event.sourceName === "STG Presents") {

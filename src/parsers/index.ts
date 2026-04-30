@@ -5,6 +5,7 @@ import { parseConfiguredTodoSource } from "./configuredTodo.js";
 import { parseEasyStreet } from "./easyStreet.js";
 import { parseElCorazon } from "./elCorazon.js";
 import { parseJazzAlley } from "./jazzAlley.js";
+import { parseKexp } from "./kexp.js";
 import { parseMarymoor } from "./marymoor.js";
 import { parseHiddenHall, parseNectar } from "./nectar.js";
 import { parseRoyalRoom } from "./royalRoom.js";
@@ -25,6 +26,7 @@ export const parsers: Record<string, SourceParser> = {
   sunset: parseSunset,
   royalRoom: parseRoyalRoom,
   jazzAlley: parseJazzAlley,
+  kexp: parseKexp,
   marymoor: parseMarymoor,
   tripleDoor: parseTripleDoor,
   hiddenHall: parseHiddenHall,

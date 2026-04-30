@@ -25,6 +25,7 @@ test("configured allowlist includes the new venue and seasonal sources", () => {
   assert.equal(names.has("Marymoor Park Concerts"), true);
   assert.equal(names.has("Chateau Ste. Michelle Summer Concerts"), true);
   assert.equal(names.has("Woodland Park Zoo / ZooTunes"), true);
+  assert.equal(names.has("The Gorge Amphitheatre Summer Concerts"), true);
   assert.equal(names.has("Climate Pledge Arena"), true);
 });
 
@@ -147,6 +148,20 @@ test("STG stays a promoter source and absorbs Neptune and Moore coverage without
   assert.equal(sources.some((source) => source.name === "Moore Theatre"), false);
 });
 
+test("KEXP Events is configured as a live public event source", () => {
+  const sources = loadSources();
+  const kexp = sources.find((source) => source.name === "KEXP Events");
+
+  assert.ok(kexp);
+  assert.equal(kexp.url, "https://www.kexp.org/events/");
+  assert.equal(kexp.parser, "kexp");
+  assert.equal(kexp.parserStatus, "live");
+  assert.equal(kexp.sourceType, "promoter");
+  assert.equal(kexp.musicOnly, true);
+  assert.equal(kexp.coveredVenues?.includes("KEXP Studio (NW Rooms)"), true);
+  assert.match(kexp.notes ?? "", /public KEXP event rows/i);
+});
+
 test("remaining outdoor summer concert TODO source is consistently marked", () => {
   const sources = loadSources();
   const remlinger = sources.find((source) => source.name === "Remlinger Farms Summer Concerts");
@@ -205,4 +220,20 @@ test("Woodland Park Zoo / ZooTunes is configured as a live seasonal outdoor sour
   assert.equal(zootunes.musicOnly, true);
   assert.equal(zootunes.parserStatus, "live");
   assert.match(zootunes.notes ?? "", /public static concert blocks/i);
+});
+
+test("The Gorge Amphitheatre Summer Concerts is tracked as a seasonal outdoor TODO source", () => {
+  const sources = loadSources();
+  const gorge = sources.find((source) => source.name === "The Gorge Amphitheatre Summer Concerts");
+
+  assert.ok(gorge);
+  assert.equal(gorge.url, "https://www.gorgeamphitheatre.com/shows");
+  assert.equal(gorge.parser, "configuredTodo");
+  assert.equal(gorge.sourceType, "seasonal_outdoor");
+  assert.equal(gorge.seasonal, true);
+  assert.equal(gorge.musicOnly, true);
+  assert.equal(gorge.parserStatus, "todo");
+  assert.equal(gorge.areaTags?.includes("Central Washington"), true);
+  assert.match(gorge.notes ?? "", /official Gorge Amphitheatre \/ Live Nation public pages/i);
+  assert.match(gorge.notes ?? "", /loading shells/i);
 });
