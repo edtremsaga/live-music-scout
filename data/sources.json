@@ -54,6 +54,17 @@
     "notes": "Live parser reads public TicketWeb-powered event rows from the official Chop Suey venue page"
   },
   {
+    "name": "Conor Byrne Pub",
+    "url": "https://www.conorbyrnepub.com/#/events",
+    "parser": "conorByrne",
+    "location": "Seattle, WA",
+    "areaTags": ["Seattle", "Ballard"],
+    "sourceType": "venue",
+    "musicOnly": true,
+    "parserStatus": "live",
+    "notes": "Live parser uses the public VenuePilot event widget embedded on Conor Byrne Pub's official events page"
+  },
+  {
     "name": "The Royal Room",
     "url": "https://theroyalroomseattle.com/events/",
     "parser": "royalRoom",

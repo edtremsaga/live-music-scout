@@ -66,6 +66,7 @@ function isLocalBandBill(event: RankedEvent): boolean {
       || event.sourceName === "Nectar Lounge"
       || event.sourceName === "Neumos"
       || event.sourceName === "Barboza"
+      || event.sourceName === "Conor Byrne Pub"
     )
     && (title.includes(",") || /\bw\/\b/i.test(title) || /\bwith\b/i.test(title))
     && !blob.includes("dj ")
@@ -145,6 +146,10 @@ export function getSourceLinkLabel(event: Pick<RankedEvent, "url" | "sourceName"
 
   if (event.venue === "Chop Suey" || event.sourceName === "Chop Suey" || url.includes("chopsuey.com")) {
     return "Chop Suey event page";
+  }
+
+  if (event.venue === "Conor Byrne Pub" || event.sourceName === "Conor Byrne Pub" || url.includes("conorbyrnepub.com")) {
+    return "Conor Byrne event page";
   }
 
   if (event.sourceName === "El Corazon" || url.includes("elcorazonseattle.com")) {
@@ -255,6 +260,10 @@ function buildWhyLine(event: RankedEvent, timeframe = "tonight"): string {
 
   if (event.venue === "Chop Suey") {
     return "A Chop Suey club show — worth a look for Capitol Hill local bills, touring acts, and louder genre nights.";
+  }
+
+  if (event.venue === "Conor Byrne Pub") {
+    return "A Conor Byrne Pub club show — a strong Ballard fit for intimate folk, roots, songwriter, country, jazz, and local-band nights.";
   }
 
   if (event.venue === "SeaMonster Lounge") {
@@ -645,6 +654,24 @@ function isGenericRoyalRoomHappyHour(event: RankedEvent): boolean {
   );
 }
 
+function isGenericConorByrneCommunityEvent(event: RankedEvent): boolean {
+  if (event.venue !== "Conor Byrne Pub" && event.sourceName !== "Conor Byrne Pub") {
+    return false;
+  }
+
+  const title = publicText(event.artist ?? event.title).toLowerCase();
+
+  if (/\b(album release|record release|release show)\b/.test(title)) {
+    return false;
+  }
+
+  if (/\b(song share|open mic|dance night|lindy hop|lesson|lessons)\b/.test(title)) {
+    return true;
+  }
+
+  return false;
+}
+
 function getWeeklyHighlightGroupScore(group: WeeklyHighlightGroup): number {
   const uniqueDates = new Set(group.events.map((event) => event.date)).size;
   const multiNightBonus = uniqueDates > 1 ? Math.min(uniqueDates - 1, 2) * 3 + 1 : 0;
@@ -744,6 +771,7 @@ export function selectWeeklyEmailSections(rankedEvents: RankedEvent[]): {
         && (!isRecurringJamNight(event) || event.score >= 12)
         && (!isMixedFormatPerformance(event) || event.score >= 12)
         && !isGenericRoyalRoomHappyHour(event)
+        && !isGenericConorByrneCommunityEvent(event)
     );
   const groupedHighlights = new Map<string, WeeklyHighlightGroup>();
 

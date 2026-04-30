@@ -134,7 +134,11 @@ function looksLikeMultiActBill(title: string): boolean {
     .replace(/[“”"'’‘]/g, "")
     .trim();
 
-  return cleaned.includes(",") && cleaned.split(",").map((part) => part.trim()).filter(Boolean).length >= 2;
+  if (cleaned.includes(",") && cleaned.split(",").map((part) => part.trim()).filter(Boolean).length >= 2) {
+    return true;
+  }
+
+  return cleaned.includes("+") && cleaned.split("+").map((part) => part.trim()).filter(Boolean).length >= 2;
 }
 
 function looksLikeSpecificRoyalRoomMusicTitle(title: string): boolean {
@@ -276,6 +280,11 @@ export function classifyEvent(event: LiveMusicEvent): ClassifiedEvent {
   if (event.venue === "Chop Suey" || event.sourceName === "Chop Suey") {
     musicScore += 3;
     reasons.push("Chop Suey is a credible Capitol Hill live-music source");
+  }
+
+  if (event.venue === "Conor Byrne Pub" || event.sourceName === "Conor Byrne Pub") {
+    musicScore += 3;
+    reasons.push("Conor Byrne Pub is a credible Ballard live-music source");
   }
 
   if (event.venue === "Bake's Place" || event.sourceName === "Bake's Place") {

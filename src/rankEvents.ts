@@ -58,6 +58,11 @@ function addVenueAwareScoring(blob: string, matchReasons: string[]): number {
     matchReasons.push("Chop Suey often surfaces Capitol Hill touring, local, and genre-club shows");
   }
 
+  if (blob.includes("conor byrne")) {
+    score += 3;
+    matchReasons.push("Conor Byrne often surfaces intimate Ballard folk, roots, songwriter, country, and local-band shows");
+  }
+
   if (
     blob.includes("the paramount theatre")
     || blob.includes("the moore theatre")

@@ -122,7 +122,7 @@ test("Skylark multi-band listing classifies as music", () => {
   assert.equal(classified.classification.eventType, "music");
 });
 
-test("Neumos, Barboza, and Chop Suey club listings classify as music", () => {
+test("Neumos, Barboza, Chop Suey, and Conor Byrne club listings classify as music", () => {
   const neumos = classifyEvent(makeEvent({
     title: "Grace Ives",
     venue: "Neumos",
@@ -144,6 +144,13 @@ test("Neumos, Barboza, and Chop Suey club listings classify as music", () => {
     genreHints: ["live music", "Capitol Hill club"],
     url: "https://chopsuey.com/tm-event/beautiful-freaks/"
   }));
+  const conorByrne = classifyEvent(makeEvent({
+    title: "Moonlight Remedy + Victor Artis + Good Enough",
+    venue: "Conor Byrne Pub",
+    sourceName: "Conor Byrne Pub",
+    genreHints: ["live music", "Ballard club"],
+    url: "https://www.conorbyrnepub.com/#/events/166862"
+  }));
 
   assert.equal(neumos.classification.isLikelyMusic, true);
   assert.equal(neumos.classification.eventType, "music");
@@ -151,6 +158,9 @@ test("Neumos, Barboza, and Chop Suey club listings classify as music", () => {
   assert.equal(barboza.classification.eventType, "music");
   assert.equal(chopSuey.classification.isLikelyMusic, true);
   assert.equal(chopSuey.classification.eventType, "music");
+  assert.equal(conorByrne.classification.isLikelyMusic, true);
+  assert.equal(conorByrne.classification.eventType, "music");
+  assert.equal(conorByrne.classification.musicConfidence, "High");
 });
 
 test("Kerry Hall yoga/class style STG listing stays out of likely music", () => {

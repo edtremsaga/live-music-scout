@@ -3,6 +3,7 @@ import { parseBakesPlace } from "./bakesPlace.js";
 import { parseChateauSteMichelle } from "./chateauSteMichelle.js";
 import { parseChopSuey } from "./chopSuey.js";
 import { parseConfiguredTodoSource } from "./configuredTodo.js";
+import { parseConorByrne } from "./conorByrne.js";
 import { parseEasyStreet } from "./easyStreet.js";
 import { parseElCorazon } from "./elCorazon.js";
 import { parseJazzAlley } from "./jazzAlley.js";
@@ -24,6 +25,7 @@ export const parsers: Record<string, SourceParser> = {
   bakesPlace: parseBakesPlace,
   chateauSteMichelle: parseChateauSteMichelle,
   chopSuey: parseChopSuey,
+  conorByrne: parseConorByrne,
   configuredTodo: parseConfiguredTodoSource,
   tractor: parseTractor,
   sunset: parseSunset,

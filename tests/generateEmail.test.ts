@@ -152,6 +152,16 @@ test("Chop Suey URL gets Chop Suey event page label", () => {
   assert.equal(getSourceLinkLabel(event), "Chop Suey event page");
 });
 
+test("Conor Byrne Pub URL gets Conor Byrne event page label", () => {
+  const event = makeRankedEvent({
+    sourceName: "Conor Byrne Pub",
+    venue: "Conor Byrne Pub",
+    url: "https://www.conorbyrnepub.com/#/events/166862"
+  });
+
+  assert.equal(getSourceLinkLabel(event), "Conor Byrne event page");
+});
+
 test("El Corazon URL gets El Corazon/Funhouse event page label", () => {
   const event = makeRankedEvent({
     sourceName: "El Corazon",
@@ -318,6 +328,21 @@ test("Chop Suey highlights use venue-specific why-line wording", () => {
   const output = generateEmailPreview(new Date("2026-04-30T12:00:00-07:00"), [event]);
 
   assert.match(output, /Why it looks good: A Chop Suey club show/);
+});
+
+test("Conor Byrne Pub highlights use venue-specific why-line wording", () => {
+  const event = makeRankedEvent({
+    title: "Moonlight Remedy + Victor Artis + Good Enough",
+    sourceName: "Conor Byrne Pub",
+    venue: "Conor Byrne Pub",
+    date: "2026-04-30",
+    time: "8:00 PM",
+    url: "https://www.conorbyrnepub.com/#/events/166862"
+  });
+
+  const output = generateEmailPreview(new Date("2026-04-30T12:00:00-07:00"), [event]);
+
+  assert.match(output, /Why it looks good: A Conor Byrne Pub club show/);
 });
 
 test("generic weekly why-line uses this-week wording", () => {
@@ -752,6 +777,80 @@ test("weekly top sections skip generic Royal Room happy hour listings", () => {
   assert.match(evaluatedSection, /Happy Hour with Sheryl Wiser — The Royal Room/);
   assert.doesNotMatch(evaluatedSection, /Happy Hour with Sheryl Wiser[^\n]*Also worth a look above\./);
   assert.doesNotMatch(evaluatedSection, /Happy Hour with Sheryl Wiser[^\n]*Highlighted above\./);
+});
+
+test("weekly top sections skip generic Conor Byrne community listings", () => {
+  const strongPicks = Array.from({ length: 8 }, (_, index) => makeRankedEvent({
+    id: `strong-conor-weekly-${index + 1}`,
+    title: `Strong Conor Weekly ${index + 1}`,
+    artist: `Strong Conor Weekly ${index + 1}`,
+    venue: `Venue ${index + 1}`,
+    sourceName: `Source ${index + 1}`,
+    url: `https://example.com/strong-conor-weekly-${index + 1}`,
+    date: `2026-05-0${Math.min(index + 1, 5)}`,
+    score: 30 - index,
+    verdict: "Go"
+  }));
+  const songShare = makeRankedEvent({
+    id: "sunday-song-share",
+    title: "Sunday Song Share",
+    artist: "Sunday Song Share",
+    venue: "Conor Byrne Pub",
+    sourceName: "Conor Byrne Pub",
+    url: "https://www.conorbyrnepub.com/#/events",
+    date: "2026-05-03",
+    score: 29,
+    verdict: "Go"
+  });
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-04-26T12:00:00-07:00"),
+    [strongPicks[0], songShare, ...strongPicks.slice(1)],
+    "2026-04-26",
+    "2026-05-03"
+  );
+  const topSections = output.slice(output.indexOf("## This Week’s Highlights"), output.indexOf("## Evaluated Shows by Day"));
+  const evaluatedSection = output.slice(output.indexOf("## Evaluated Shows by Day"));
+
+  assert.doesNotMatch(topSections, /### Sunday Song Share/);
+  assert.match(evaluatedSection, /Sunday Song Share — Conor Byrne Pub/);
+  assert.doesNotMatch(evaluatedSection, /Sunday Song Share[^\n]*Also worth a look above\./);
+  assert.doesNotMatch(evaluatedSection, /Sunday Song Share[^\n]*Highlighted above\./);
+});
+
+test("weekly top sections allow specific Conor Byrne album-release bills", () => {
+  const strongPicks = Array.from({ length: 6 }, (_, index) => makeRankedEvent({
+    id: `strong-conor-release-${index + 1}`,
+    title: `Strong Conor Release ${index + 1}`,
+    artist: `Strong Conor Release ${index + 1}`,
+    venue: `Venue ${index + 1}`,
+    sourceName: `Source ${index + 1}`,
+    url: `https://example.com/strong-conor-release-${index + 1}`,
+    date: `2026-05-0${Math.min(index + 1, 5)}`,
+    score: 30 - index,
+    verdict: "Go"
+  }));
+  const albumRelease = makeRankedEvent({
+    id: "guest-directors-album-release",
+    title: "Guest Directors (Album Release) with Model Shop & Planets in the Ocean",
+    artist: "Guest Directors (Album Release) with Model Shop & Planets in the Ocean",
+    venue: "Conor Byrne Pub",
+    sourceName: "Conor Byrne Pub",
+    url: "https://tickets.venuepilot.com/e/guest-directors-album-release",
+    date: "2026-05-02",
+    score: 23,
+    verdict: "Go"
+  });
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-04-26T12:00:00-07:00"),
+    [...strongPicks, albumRelease],
+    "2026-04-26",
+    "2026-05-03"
+  );
+  const topSections = output.slice(output.indexOf("## This Week’s Highlights"), output.indexOf("## Evaluated Shows by Day"));
+
+  assert.match(topSections, /### Guest Directors \(Album Release\) with Model Shop & Planets in the Ocean/);
 });
 
 test("weekly top sections allow Royal Room happy hour listings with strong music signals", () => {

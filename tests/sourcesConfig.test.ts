@@ -31,6 +31,7 @@ test("configured allowlist includes the new venue and seasonal sources", () => {
   assert.equal(names.has("Neumos"), true);
   assert.equal(names.has("Barboza"), true);
   assert.equal(names.has("Chop Suey"), true);
+  assert.equal(names.has("Conor Byrne Pub"), true);
 });
 
 test("The Triple Door is configured as a live parsed venue source", () => {
@@ -100,6 +101,20 @@ test("Chop Suey is configured as a live parsed Capitol Hill venue source", () =>
   assert.equal(chopSuey.musicOnly, true);
   assert.equal(chopSuey.areaTags?.includes("Capitol Hill"), true);
   assert.match(chopSuey.notes ?? "", /public TicketWeb-powered event rows/i);
+});
+
+test("Conor Byrne Pub is configured as a live parsed Ballard venue source", () => {
+  const sources = loadSources();
+  const conorByrne = sources.find((source) => source.name === "Conor Byrne Pub");
+
+  assert.ok(conorByrne);
+  assert.equal(conorByrne.url, "https://www.conorbyrnepub.com/#/events");
+  assert.equal(conorByrne.parser, "conorByrne");
+  assert.equal(conorByrne.parserStatus, "live");
+  assert.equal(conorByrne.sourceType, "venue");
+  assert.equal(conorByrne.musicOnly, true);
+  assert.equal(conorByrne.areaTags?.includes("Ballard"), true);
+  assert.match(conorByrne.notes ?? "", /public VenuePilot event widget/i);
 });
 
 test("Nectar Lounge, Hidden Hall, and Skylark Cafe are configured as live parsed venue sources", () => {
