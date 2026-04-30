@@ -128,6 +128,14 @@ export function getSourceLinkLabel(event: Pick<RankedEvent, "url" | "sourceName"
     return "Chateau Ste. Michelle event page";
   }
 
+  if (event.sourceName === "Marymoor Park Concerts" || url.includes("marymoorlive.com")) {
+    return "Marymoor Live event page";
+  }
+
+  if (event.sourceName === "Woodland Park Zoo / ZooTunes" || url.includes("zoo.org/zootunes") || url.includes("etix.com")) {
+    return "ZooTunes event page";
+  }
+
   if (event.sourceName === "STG Presents" || url.includes("stgpresents.org")) {
     return "STG event page";
   }
@@ -200,6 +208,14 @@ function buildWhyLine(event: RankedEvent, timeframe = "tonight"): string {
 
   if (event.venue === "SeaMonster Lounge") {
     return "A SeaMonster Lounge club set with Wallingford funk, soul, jazz, and improv energy — a strong option if you want a neighborhood room built around musicians.";
+  }
+
+  if (event.sourceName === "Marymoor Park Concerts") {
+    return "A Marymoor Park outdoor concert — worth considering if you want a larger summer show on the Eastside.";
+  }
+
+  if (event.sourceName === "Woodland Park Zoo / ZooTunes") {
+    return "A ZooTunes outdoor concert at Woodland Park Zoo — a good seasonal option if the artist already appeals to you.";
   }
 
   if (event.sourceName === "STG Presents") {

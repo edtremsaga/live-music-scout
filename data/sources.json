@@ -128,19 +128,19 @@
     "seasonal": true,
     "duplicateGroup": "remlinger-farms",
     "parserStatus": "todo",
-    "notes": "parser TODO: Remlinger Farms Summer Concerts is configured as an outdoor summer music series source, but event output may overlap with STG venue coverage and needs explicit dedupe if a parser is added"
+    "notes": "parser TODO: public Remlinger concert/calendar pages currently expose an EventON calendar shell rather than stable static concert rows; if a reliable public parser is added, dedupe against STG-covered Remlinger events"
   },
   {
     "name": "Marymoor Park Concerts",
     "url": "https://www.marymoorlive.com/",
-    "parser": "configuredTodo",
+    "parser": "marymoor",
     "location": "Redmond, WA",
     "areaTags": ["Eastside", "Redmond", "Outdoor"],
     "sourceType": "seasonal_outdoor",
     "musicOnly": true,
     "seasonal": true,
-    "parserStatus": "todo",
-    "notes": "parser TODO: Marymoor Park Concerts is configured as an outdoor summer music series source, but a reliable parser is not implemented yet"
+    "parserStatus": "live",
+    "notes": "Live parser reads public static event rows from the Marymoor Live concert page"
   },
   {
     "name": "Chateau Ste. Michelle Summer Concerts",
@@ -157,14 +157,14 @@
   {
     "name": "Woodland Park Zoo / ZooTunes",
     "url": "https://www.zoo.org/zootunes",
-    "parser": "configuredTodo",
+    "parser": "zooTunes",
     "location": "Seattle, WA",
     "areaTags": ["Seattle", "Phinney Ridge", "Outdoor"],
     "sourceType": "seasonal_outdoor",
     "musicOnly": true,
     "seasonal": true,
-    "parserStatus": "todo",
-    "notes": "parser TODO: Woodland Park Zoo / ZooTunes is configured as an outdoor summer music series source, but a reliable parser is not implemented yet"
+    "parserStatus": "live",
+    "notes": "Live parser reads public static concert blocks from the ZooTunes page"
   },
   {
     "name": "Climate Pledge Arena",

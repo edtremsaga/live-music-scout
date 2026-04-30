@@ -166,6 +166,26 @@ test("Chateau Ste. Michelle URL gets Chateau event page label", () => {
   assert.equal(getSourceLinkLabel(event), "Chateau Ste. Michelle event page");
 });
 
+test("Marymoor URL gets Marymoor Live event page label", () => {
+  const event = makeRankedEvent({
+    sourceName: "Marymoor Park Concerts",
+    venue: "Marymoor Park",
+    url: "https://www.marymoorlive.com/tm-event/claypool-gold/"
+  });
+
+  assert.equal(getSourceLinkLabel(event), "Marymoor Live event page");
+});
+
+test("ZooTunes URL gets ZooTunes event page label", () => {
+  const event = makeRankedEvent({
+    sourceName: "Woodland Park Zoo / ZooTunes",
+    venue: "Woodland Park Zoo",
+    url: "https://www.etix.com/ticket/p/82884719/yacht-rock-revue-primetime-seattle-woodland-park-zoo"
+  });
+
+  assert.equal(getSourceLinkLabel(event), "ZooTunes event page");
+});
+
 test("fallback URL gets Event page label", () => {
   const event = makeRankedEvent({
     url: "https://example.com/events/test"

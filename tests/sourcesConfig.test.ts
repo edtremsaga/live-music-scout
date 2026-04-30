@@ -147,11 +147,9 @@ test("STG stays a promoter source and absorbs Neptune and Moore coverage without
   assert.equal(sources.some((source) => source.name === "Moore Theatre"), false);
 });
 
-test("outdoor summer concert sources are consistently marked as configured TODO entries", () => {
+test("remaining outdoor summer concert TODO source is consistently marked", () => {
   const sources = loadSources();
   const remlinger = sources.find((source) => source.name === "Remlinger Farms Summer Concerts");
-  const marymoor = sources.find((source) => source.name === "Marymoor Park Concerts");
-  const zootunes = sources.find((source) => source.name === "Woodland Park Zoo / ZooTunes");
   const climatePledge = sources.find((source) => source.name === "Climate Pledge Arena");
 
   assert.ok(remlinger);
@@ -160,18 +158,6 @@ test("outdoor summer concert sources are consistently marked as configured TODO 
   assert.equal(remlinger.musicOnly, true);
   assert.equal(remlinger.duplicateGroup, "remlinger-farms");
   assert.equal(remlinger.parserStatus, "todo");
-
-  assert.ok(marymoor);
-  assert.equal(marymoor.sourceType, "seasonal_outdoor");
-  assert.equal(marymoor.seasonal, true);
-  assert.equal(marymoor.musicOnly, true);
-  assert.equal(marymoor.parserStatus, "todo");
-
-  assert.ok(zootunes);
-  assert.equal(zootunes.sourceType, "seasonal_outdoor");
-  assert.equal(zootunes.seasonal, true);
-  assert.equal(zootunes.musicOnly, true);
-  assert.equal(zootunes.parserStatus, "todo");
 
   assert.ok(climatePledge);
   assert.equal(climatePledge.sourceType, "large_venue");
@@ -191,4 +177,32 @@ test("Chateau Ste. Michelle Summer Concerts is configured as a live seasonal out
   assert.equal(chateau.musicOnly, true);
   assert.equal(chateau.parserStatus, "live");
   assert.match(chateau.notes ?? "", /public static event rows/i);
+});
+
+test("Marymoor Park Concerts is configured as a live seasonal outdoor source", () => {
+  const sources = loadSources();
+  const marymoor = sources.find((source) => source.name === "Marymoor Park Concerts");
+
+  assert.ok(marymoor);
+  assert.equal(marymoor.url, "https://www.marymoorlive.com/");
+  assert.equal(marymoor.parser, "marymoor");
+  assert.equal(marymoor.sourceType, "seasonal_outdoor");
+  assert.equal(marymoor.seasonal, true);
+  assert.equal(marymoor.musicOnly, true);
+  assert.equal(marymoor.parserStatus, "live");
+  assert.match(marymoor.notes ?? "", /public static event rows/i);
+});
+
+test("Woodland Park Zoo / ZooTunes is configured as a live seasonal outdoor source", () => {
+  const sources = loadSources();
+  const zootunes = sources.find((source) => source.name === "Woodland Park Zoo / ZooTunes");
+
+  assert.ok(zootunes);
+  assert.equal(zootunes.url, "https://www.zoo.org/zootunes");
+  assert.equal(zootunes.parser, "zooTunes");
+  assert.equal(zootunes.sourceType, "seasonal_outdoor");
+  assert.equal(zootunes.seasonal, true);
+  assert.equal(zootunes.musicOnly, true);
+  assert.equal(zootunes.parserStatus, "live");
+  assert.match(zootunes.notes ?? "", /public static concert blocks/i);
 });
