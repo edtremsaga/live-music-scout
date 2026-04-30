@@ -1,5 +1,6 @@
 import type { SourceParser } from "../types.js";
 import { parseBakesPlace } from "./bakesPlace.js";
+import { parseChateauSteMichelle } from "./chateauSteMichelle.js";
 import { parseConfiguredTodoSource } from "./configuredTodo.js";
 import { parseEasyStreet } from "./easyStreet.js";
 import { parseElCorazon } from "./elCorazon.js";
@@ -16,6 +17,7 @@ import { parseTripleDoor } from "./tripleDoor.js";
 
 export const parsers: Record<string, SourceParser> = {
   bakesPlace: parseBakesPlace,
+  chateauSteMichelle: parseChateauSteMichelle,
   configuredTodo: parseConfiguredTodoSource,
   tractor: parseTractor,
   sunset: parseSunset,

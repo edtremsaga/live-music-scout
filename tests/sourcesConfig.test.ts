@@ -151,7 +151,6 @@ test("outdoor summer concert sources are consistently marked as configured TODO 
   const sources = loadSources();
   const remlinger = sources.find((source) => source.name === "Remlinger Farms Summer Concerts");
   const marymoor = sources.find((source) => source.name === "Marymoor Park Concerts");
-  const chateau = sources.find((source) => source.name === "Chateau Ste. Michelle Summer Concerts");
   const zootunes = sources.find((source) => source.name === "Woodland Park Zoo / ZooTunes");
   const climatePledge = sources.find((source) => source.name === "Climate Pledge Arena");
 
@@ -168,12 +167,6 @@ test("outdoor summer concert sources are consistently marked as configured TODO 
   assert.equal(marymoor.musicOnly, true);
   assert.equal(marymoor.parserStatus, "todo");
 
-  assert.ok(chateau);
-  assert.equal(chateau.sourceType, "seasonal_outdoor");
-  assert.equal(chateau.seasonal, true);
-  assert.equal(chateau.musicOnly, true);
-  assert.equal(chateau.parserStatus, "todo");
-
   assert.ok(zootunes);
   assert.equal(zootunes.sourceType, "seasonal_outdoor");
   assert.equal(zootunes.seasonal, true);
@@ -184,4 +177,18 @@ test("outdoor summer concert sources are consistently marked as configured TODO 
   assert.equal(climatePledge.sourceType, "large_venue");
   assert.equal(climatePledge.musicOnly, true);
   assert.equal(climatePledge.parserStatus, "todo");
+});
+
+test("Chateau Ste. Michelle Summer Concerts is configured as a live seasonal outdoor source", () => {
+  const sources = loadSources();
+  const chateau = sources.find((source) => source.name === "Chateau Ste. Michelle Summer Concerts");
+
+  assert.ok(chateau);
+  assert.equal(chateau.url, "https://www.ste-michelle.com/visit-us/summer-concerts");
+  assert.equal(chateau.parser, "chateauSteMichelle");
+  assert.equal(chateau.sourceType, "seasonal_outdoor");
+  assert.equal(chateau.seasonal, true);
+  assert.equal(chateau.musicOnly, true);
+  assert.equal(chateau.parserStatus, "live");
+  assert.match(chateau.notes ?? "", /public static event rows/i);
 });

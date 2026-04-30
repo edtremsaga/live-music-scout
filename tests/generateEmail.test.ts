@@ -156,6 +156,16 @@ test("SeaMonster Lounge URL gets SeaMonster event page label", () => {
   assert.equal(getSourceLinkLabel(event), "SeaMonster Lounge event page");
 });
 
+test("Chateau Ste. Michelle URL gets Chateau event page label", () => {
+  const event = makeRankedEvent({
+    sourceName: "Chateau Ste. Michelle Summer Concerts",
+    venue: "Chateau Ste. Michelle Amphitheatre",
+    url: "https://www.ste-michelle.com/bob-dylan/5637795577.p"
+  });
+
+  assert.equal(getSourceLinkLabel(event), "Chateau Ste. Michelle event page");
+});
+
 test("fallback URL gets Event page label", () => {
   const event = makeRankedEvent({
     url: "https://example.com/events/test"

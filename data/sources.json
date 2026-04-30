@@ -145,14 +145,14 @@
   {
     "name": "Chateau Ste. Michelle Summer Concerts",
     "url": "https://www.ste-michelle.com/visit-us/summer-concerts",
-    "parser": "configuredTodo",
+    "parser": "chateauSteMichelle",
     "location": "Woodinville, WA",
     "areaTags": ["Eastside", "Woodinville", "Outdoor"],
     "sourceType": "seasonal_outdoor",
     "musicOnly": true,
     "seasonal": true,
-    "parserStatus": "todo",
-    "notes": "parser TODO: Chateau Ste. Michelle Summer Concerts is configured as an outdoor summer music series source, but a reliable parser is not implemented yet"
+    "parserStatus": "live",
+    "notes": "Live parser reads public static event rows from the Chateau Ste. Michelle summer concerts page"
   },
   {
     "name": "Woodland Park Zoo / ZooTunes",

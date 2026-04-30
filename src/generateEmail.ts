@@ -124,6 +124,10 @@ export function getSourceLinkLabel(event: Pick<RankedEvent, "url" | "sourceName"
     return "SeaMonster Lounge event page";
   }
 
+  if (event.sourceName === "Chateau Ste. Michelle Summer Concerts" || url.includes("ste-michelle.com")) {
+    return "Chateau Ste. Michelle event page";
+  }
+
   if (event.sourceName === "STG Presents" || url.includes("stgpresents.org")) {
     return "STG event page";
   }
