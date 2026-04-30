@@ -21,6 +21,28 @@
     "notes": "Live parser uses the public DICE event widget embedded on Sunset Tavern's shows page"
   },
   {
+    "name": "Neumos",
+    "url": "https://www.neumos.com/events/",
+    "parser": "neumos",
+    "location": "Seattle, WA",
+    "areaTags": ["Seattle", "Capitol Hill"],
+    "sourceType": "venue",
+    "musicOnly": true,
+    "parserStatus": "live",
+    "notes": "Live parser reads public static Carbonhouse event rows from the Neumos events page"
+  },
+  {
+    "name": "Barboza",
+    "url": "https://www.thebarboza.com/events",
+    "parser": "barboza",
+    "location": "Seattle, WA",
+    "areaTags": ["Seattle", "Capitol Hill"],
+    "sourceType": "venue",
+    "musicOnly": true,
+    "parserStatus": "live",
+    "notes": "Live parser reads public static Carbonhouse event rows from the Barboza events page"
+  },
+  {
     "name": "The Royal Room",
     "url": "https://theroyalroomseattle.com/events/",
     "parser": "royalRoom",

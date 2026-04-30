@@ -263,6 +263,16 @@ export function classifyEvent(event: LiveMusicEvent): ClassifiedEvent {
     reasons.push("Skylark Cafe is a credible local-band source");
   }
 
+  if (event.venue === "Neumos" || event.sourceName === "Neumos") {
+    musicScore += 3;
+    reasons.push("Neumos is a credible Capitol Hill live-music source");
+  }
+
+  if (event.venue === "Barboza" || event.sourceName === "Barboza") {
+    musicScore += 3;
+    reasons.push("Barboza is a credible Capitol Hill live-music source");
+  }
+
   if (event.venue === "Bake's Place" || event.sourceName === "Bake's Place") {
     musicScore += 3;
     reasons.push("Bake's Place is a credible listening-room music source");

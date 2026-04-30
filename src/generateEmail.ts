@@ -58,7 +58,13 @@ function isLocalBandBill(event: RankedEvent): boolean {
   const blob = getEventTextBlob(event);
   const title = publicText(event.artist ?? event.title);
   return (
-    (event.sourceName === "Skylark Cafe" || event.sourceName === "Hidden Hall" || event.sourceName === "Nectar Lounge")
+    (
+      event.sourceName === "Skylark Cafe"
+      || event.sourceName === "Hidden Hall"
+      || event.sourceName === "Nectar Lounge"
+      || event.sourceName === "Neumos"
+      || event.sourceName === "Barboza"
+    )
     && (title.includes(",") || /\bw\/\b/i.test(title) || /\bwith\b/i.test(title))
     && !blob.includes("dj ")
   );
@@ -110,6 +116,14 @@ export function getSourceLinkLabel(event: Pick<RankedEvent, "url" | "sourceName"
 
   if (event.venue === "Sunset Tavern" || event.sourceName === "Sunset Tavern" || url.includes("dice.fm")) {
     return "Sunset Tavern event page";
+  }
+
+  if (event.venue === "Neumos" || event.sourceName === "Neumos" || url.includes("neumos.com")) {
+    return "Neumos event page";
+  }
+
+  if (event.venue === "Barboza" || event.sourceName === "Barboza" || url.includes("thebarboza.com")) {
+    return "Barboza event page";
   }
 
   if (event.sourceName === "El Corazon" || url.includes("elcorazonseattle.com")) {
@@ -208,6 +222,14 @@ function buildWhyLine(event: RankedEvent, timeframe = "tonight"): string {
 
   if (event.venue === "Skylark Cafe") {
     return "A local-band Skylark night with strong West Seattle club energy — a good option if you want something smaller, scrappier, and close to the neighborhood scene.";
+  }
+
+  if (event.venue === "Neumos") {
+    return "A Capitol Hill club show at Neumos — worth a look when you want a larger small-room touring or local bill.";
+  }
+
+  if (event.venue === "Barboza") {
+    return "A downstairs Barboza club show — a good option if you want a tighter Capitol Hill room for newer touring or local acts.";
   }
 
   if (event.venue === "SeaMonster Lounge") {
@@ -497,7 +519,7 @@ function renderEvaluatedItem(event: RankedEvent): string {
       : event.verdict === "Maybe"
       ? "Highlight-worthy, but a lighter fit than the top picks."
       : event.verdict === "Go"
-        ? "Strong fit, but already covered in the highlights."
+        ? "Not highlighted: good fit, but not one of tonight’s top picks."
         : `Not highlighted: ${buildSkipReason(event)}.`;
 
   return `- ${title} — ${venue}${timePart} — ${publicText(reason)} ${formatSourceLinkMarkdown(event)}`;
@@ -513,7 +535,7 @@ function renderEvaluatedItemHtml(event: RankedEvent): string {
       : event.verdict === "Maybe"
       ? "Highlight-worthy, but a lighter fit than the top picks."
       : event.verdict === "Go"
-        ? "Strong fit, but already covered in the highlights."
+        ? "Not highlighted: good fit, but not one of tonight’s top picks."
         : `Not highlighted: ${buildSkipReason(event)}.`;
 
   return `<li>${escapeHtml(title)} — ${escapeHtml(venue)}${escapeHtml(timePart)} — ${escapeHtml(publicText(reason))} ${formatSourceLinkHtml(event)}</li>`;

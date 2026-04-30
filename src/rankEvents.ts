@@ -43,6 +43,16 @@ function addVenueAwareScoring(blob: string, matchReasons: string[]): number {
     matchReasons.push("Sunset Tavern often lines up with indie rock, rock, and local band bills");
   }
 
+  if (blob.includes("neumos")) {
+    score += 2;
+    matchReasons.push("Neumos often surfaces Capitol Hill touring and local club shows");
+  }
+
+  if (blob.includes("barboza")) {
+    score += 2;
+    matchReasons.push("Barboza often surfaces intimate Capitol Hill touring and local club shows");
+  }
+
   if (
     blob.includes("the paramount theatre")
     || blob.includes("the moore theatre")

@@ -122,6 +122,28 @@ test("Skylark multi-band listing classifies as music", () => {
   assert.equal(classified.classification.eventType, "music");
 });
 
+test("Neumos and Barboza club listings classify as music", () => {
+  const neumos = classifyEvent(makeEvent({
+    title: "Grace Ives",
+    venue: "Neumos",
+    sourceName: "Neumos",
+    genreHints: ["live music", "Capitol Hill club", "touring act"],
+    url: "https://www.neumos.com/events/detail/grace-ives-tickets-1341247"
+  }));
+  const barboza = classifyEvent(makeEvent({
+    title: "Daniel Romano's Outfit",
+    venue: "Barboza",
+    sourceName: "Barboza",
+    genreHints: ["live music", "Capitol Hill club", "supporting artists"],
+    url: "https://www.thebarboza.com/events/detail/daniel-romanos-outfit-tickets-1352175"
+  }));
+
+  assert.equal(neumos.classification.isLikelyMusic, true);
+  assert.equal(neumos.classification.eventType, "music");
+  assert.equal(barboza.classification.isLikelyMusic, true);
+  assert.equal(barboza.classification.eventType, "music");
+});
+
 test("Kerry Hall yoga/class style STG listing stays out of likely music", () => {
   const event = makeEvent({
     title: "Yoga en Español con Karla Mora Repeating Event",

@@ -126,6 +126,22 @@ test("Sunset Tavern DICE URL gets Sunset Tavern event page label", () => {
   assert.equal(getSourceLinkLabel(event), "Sunset Tavern event page");
 });
 
+test("Neumos and Barboza URLs get venue-specific event page labels", () => {
+  const neumos = makeRankedEvent({
+    sourceName: "Neumos",
+    venue: "Neumos",
+    url: "https://www.neumos.com/events/detail/grace-ives-tickets-1341247"
+  });
+  const barboza = makeRankedEvent({
+    sourceName: "Barboza",
+    venue: "Barboza",
+    url: "https://www.thebarboza.com/events/detail/daniel-romanos-outfit-tickets-1352175"
+  });
+
+  assert.equal(getSourceLinkLabel(neumos), "Neumos event page");
+  assert.equal(getSourceLinkLabel(barboza), "Barboza event page");
+});
+
 test("El Corazon URL gets El Corazon/Funhouse event page label", () => {
   const event = makeRankedEvent({
     sourceName: "El Corazon",
@@ -253,6 +269,30 @@ test("SeaMonster highlights use venue-specific why-line wording", () => {
   const output = generateEmailPreview(new Date("2026-04-29T12:00:00-07:00"), [event]);
 
   assert.match(output, /Why it looks good: A SeaMonster Lounge club set with Wallingford funk, soul, jazz, and improv energy/);
+});
+
+test("Neumos and Barboza highlights use venue-specific why-line wording", () => {
+  const neumos = makeRankedEvent({
+    title: "Grace Ives",
+    sourceName: "Neumos",
+    venue: "Neumos",
+    date: "2026-05-01",
+    time: "5:00 PM",
+    url: "https://www.neumos.com/events/detail/grace-ives-tickets-1341247"
+  });
+  const barboza = makeRankedEvent({
+    title: "Daniel Romano's Outfit",
+    sourceName: "Barboza",
+    venue: "Barboza",
+    date: "2026-05-01",
+    time: "6:30 PM",
+    url: "https://www.thebarboza.com/events/detail/daniel-romanos-outfit-tickets-1352175"
+  });
+
+  const output = generateEmailPreview(new Date("2026-05-01T12:00:00-07:00"), [neumos, barboza]);
+
+  assert.match(output, /Why it looks good: A Capitol Hill club show at Neumos/);
+  assert.match(output, /Why it looks good: A downstairs Barboza club show/);
 });
 
 test("generic weekly why-line uses this-week wording", () => {
@@ -413,6 +453,35 @@ test("daily top sections apply light venue caps when one venue has many high-sco
   assert.match(highlightsSection, /### SeaMonster Two/);
   assert.doesNotMatch(highlightsSection, /### SeaMonster Three/);
   assert.match(highlightsSection, /### Tractor Pick/);
+});
+
+test("daily evaluated Go items left out by caps do not say they were highlighted", () => {
+  const picks = ["One", "Two", "Three"].map((name, index) => makeRankedEvent({
+    id: `highlight-${index}`,
+    title: `Highlight ${name}`,
+    artist: `Highlight ${name}`,
+    venue: `Venue ${name}`,
+    sourceName: `Venue ${name}`,
+    score: 16 - index,
+    verdict: "Go"
+  }));
+  const cappedOut = makeRankedEvent({
+    id: "capped-out",
+    title: "Good Capped Out Pick",
+    artist: "Good Capped Out Pick",
+    venue: "Another Venue",
+    sourceName: "Another Venue",
+    score: 8,
+    verdict: "Go"
+  });
+
+  const output = generateEmailPreview(
+    new Date("2026-04-29T12:00:00-07:00"),
+    [...picks, cappedOut]
+  );
+
+  assert.match(output, /Good Capped Out Pick .* Not highlighted: good fit, but not one of tonight’s top picks\./);
+  assert.doesNotMatch(output, /Good Capped Out Pick .* already covered in the highlights/);
 });
 
 test("daily html includes Also Worth Checking when Maybe items are present", () => {

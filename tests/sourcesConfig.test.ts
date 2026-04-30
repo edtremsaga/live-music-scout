@@ -27,6 +27,9 @@ test("configured allowlist includes the new venue and seasonal sources", () => {
   assert.equal(names.has("Woodland Park Zoo / ZooTunes"), true);
   assert.equal(names.has("The Gorge Amphitheatre Summer Concerts"), true);
   assert.equal(names.has("Climate Pledge Arena"), true);
+  assert.equal(names.has("KEXP Events"), true);
+  assert.equal(names.has("Neumos"), true);
+  assert.equal(names.has("Barboza"), true);
 });
 
 test("The Triple Door is configured as a live parsed venue source", () => {
@@ -58,6 +61,30 @@ test("Sunset Tavern is configured as a live parsed venue source", () => {
   assert.equal(sunset.parserStatus, "live");
   assert.equal(sunset.musicOnly, true);
   assert.match(sunset.notes ?? "", /DICE event widget/i);
+});
+
+test("Neumos and Barboza are configured as live parsed Capitol Hill venue sources", () => {
+  const sources = loadSources();
+  const neumos = sources.find((source) => source.name === "Neumos");
+  const barboza = sources.find((source) => source.name === "Barboza");
+
+  assert.ok(neumos);
+  assert.equal(neumos.url, "https://www.neumos.com/events/");
+  assert.equal(neumos.parser, "neumos");
+  assert.equal(neumos.parserStatus, "live");
+  assert.equal(neumos.sourceType, "venue");
+  assert.equal(neumos.musicOnly, true);
+  assert.equal(neumos.areaTags?.includes("Capitol Hill"), true);
+  assert.match(neumos.notes ?? "", /public static Carbonhouse event rows/i);
+
+  assert.ok(barboza);
+  assert.equal(barboza.url, "https://www.thebarboza.com/events");
+  assert.equal(barboza.parser, "barboza");
+  assert.equal(barboza.parserStatus, "live");
+  assert.equal(barboza.sourceType, "venue");
+  assert.equal(barboza.musicOnly, true);
+  assert.equal(barboza.areaTags?.includes("Capitol Hill"), true);
+  assert.match(barboza.notes ?? "", /public static Carbonhouse event rows/i);
 });
 
 test("Nectar Lounge, Hidden Hall, and Skylark Cafe are configured as live parsed venue sources", () => {
