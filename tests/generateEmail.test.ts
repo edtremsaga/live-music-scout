@@ -142,6 +142,16 @@ test("Neumos and Barboza URLs get venue-specific event page labels", () => {
   assert.equal(getSourceLinkLabel(barboza), "Barboza event page");
 });
 
+test("Chop Suey URL gets Chop Suey event page label", () => {
+  const event = makeRankedEvent({
+    sourceName: "Chop Suey",
+    venue: "Chop Suey",
+    url: "https://chopsuey.com/tm-event/the-crooked-stuff/"
+  });
+
+  assert.equal(getSourceLinkLabel(event), "Chop Suey event page");
+});
+
 test("El Corazon URL gets El Corazon/Funhouse event page label", () => {
   const event = makeRankedEvent({
     sourceName: "El Corazon",
@@ -293,6 +303,21 @@ test("Neumos and Barboza highlights use venue-specific why-line wording", () => 
 
   assert.match(output, /Why it looks good: A Capitol Hill club show at Neumos/);
   assert.match(output, /Why it looks good: A downstairs Barboza club show/);
+});
+
+test("Chop Suey highlights use venue-specific why-line wording", () => {
+  const event = makeRankedEvent({
+    title: "Beautiful Freaks, Universe, Casino Youth, Fatal Femmes, Nerve Rot",
+    sourceName: "Chop Suey",
+    venue: "Chop Suey",
+    date: "2026-04-30",
+    time: "7:30 PM",
+    url: "https://chopsuey.com/tm-event/beautiful-freaks/"
+  });
+
+  const output = generateEmailPreview(new Date("2026-04-30T12:00:00-07:00"), [event]);
+
+  assert.match(output, /Why it looks good: A Chop Suey club show/);
 });
 
 test("generic weekly why-line uses this-week wording", () => {
@@ -969,6 +994,50 @@ test("weekly top sections apply combined venue caps across highlights and also w
   assert.equal(seaMonsterTopSectionCount, 3);
   assert.match(topSections, /### Tractor Tavern Pick/);
   assert.match(topSections, /### The Royal Room Pick/);
+});
+
+test("weekly highlights apply a large outdoor seasonal cap when club alternatives exist", () => {
+  const outdoorEvents = [
+    ["Marymoor Park Concerts", "Marymoor Park"],
+    ["Chateau Ste. Michelle Summer Concerts", "Chateau Ste. Michelle Amphitheatre"],
+    ["Woodland Park Zoo / ZooTunes", "Woodland Park Zoo"],
+    ["Marymoor Park Concerts", "Marymoor Park"]
+  ].map(([sourceName, venue], index) => makeRankedEvent({
+    id: `outdoor-${index + 1}`,
+    title: `Outdoor Pick ${index + 1}`,
+    artist: `Outdoor Pick ${index + 1}`,
+    venue,
+    sourceName,
+    url: `https://example.com/outdoor-${index + 1}`,
+    date: `2026-06-0${index + 1}`,
+    score: 40 - index,
+    verdict: "Go"
+  }));
+  const clubEvents = ["Tractor Tavern", "The Royal Room", "SeaMonster Lounge", "Sunset Tavern"].map((venue, index) => makeRankedEvent({
+    id: `club-${index + 1}`,
+    title: `${venue} Pick`,
+    artist: `${venue} Pick`,
+    venue,
+    sourceName: venue,
+    url: `https://example.com/club-${index + 1}`,
+    date: `2026-06-0${index + 1}`,
+    score: 30 - index,
+    verdict: "Go"
+  }));
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-05-31T12:00:00-07:00"),
+    [...outdoorEvents, ...clubEvents],
+    "2026-05-31",
+    "2026-06-07"
+  );
+  const highlightsSection = output.slice(output.indexOf("## This Week’s Highlights"), output.indexOf("## Also Worth a Look"));
+  const topSections = output.slice(output.indexOf("## This Week’s Highlights"), output.indexOf("## Evaluated Shows by Day"));
+
+  assert.equal((highlightsSection.match(/### Outdoor Pick/g) ?? []).length, 2);
+  assert.equal((topSections.match(/### Outdoor Pick/g) ?? []).length, 3);
+  assert.match(highlightsSection, /### Tractor Tavern Pick/);
+  assert.match(highlightsSection, /### The Royal Room Pick/);
 });
 
 test("grouped multi-night strong run can beat a generic one-off weekly highlight", () => {

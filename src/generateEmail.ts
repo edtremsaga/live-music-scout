@@ -20,6 +20,8 @@ const MAX_WEEKLY_HIGHLIGHTS_PER_VENUE = 2;
 const MAX_WEEKLY_HIGHLIGHTS_PER_SOURCE = 2;
 const MAX_WEEKLY_TOP_SECTIONS_PER_VENUE = 3;
 const MAX_WEEKLY_TOP_SECTIONS_PER_SOURCE = 3;
+const MAX_WEEKLY_HIGHLIGHTS_SEASONAL_OUTDOOR = 2;
+const MAX_WEEKLY_TOP_SECTIONS_SEASONAL_OUTDOOR = 3;
 const WEEKLY_DIVERSITY_OVERRIDE_GAP = 1;
 
 function escapeHtml(value: string): string {
@@ -75,6 +77,21 @@ function isMixedFormatPerformance(event: RankedEvent): boolean {
   return blob.includes("dina martina");
 }
 
+function isLargeOutdoorSeasonalSource(event: Pick<RankedEvent, "sourceName" | "venue">): boolean {
+  return [
+    "Marymoor Park Concerts",
+    "Chateau Ste. Michelle Summer Concerts",
+    "Woodland Park Zoo / ZooTunes",
+    "Remlinger Farms Summer Concerts"
+  ].includes(event.sourceName)
+    || [
+      "Marymoor Park",
+      "Chateau Ste. Michelle Amphitheatre",
+      "Woodland Park Zoo",
+      "Remlinger Farms"
+    ].includes(event.venue);
+}
+
 export function getSourceLinkLabel(event: Pick<RankedEvent, "url" | "sourceName" | "venue">): string {
   const url = event.url.toLowerCase();
 
@@ -124,6 +141,10 @@ export function getSourceLinkLabel(event: Pick<RankedEvent, "url" | "sourceName"
 
   if (event.venue === "Barboza" || event.sourceName === "Barboza" || url.includes("thebarboza.com")) {
     return "Barboza event page";
+  }
+
+  if (event.venue === "Chop Suey" || event.sourceName === "Chop Suey" || url.includes("chopsuey.com")) {
+    return "Chop Suey event page";
   }
 
   if (event.sourceName === "El Corazon" || url.includes("elcorazonseattle.com")) {
@@ -230,6 +251,10 @@ function buildWhyLine(event: RankedEvent, timeframe = "tonight"): string {
 
   if (event.venue === "Barboza") {
     return "A downstairs Barboza club show — a good option if you want a tighter Capitol Hill room for newer touring or local acts.";
+  }
+
+  if (event.venue === "Chop Suey") {
+    return "A Chop Suey club show — worth a look for Capitol Hill local bills, touring acts, and louder genre nights.";
   }
 
   if (event.venue === "SeaMonster Lounge") {
@@ -759,8 +784,12 @@ export function selectWeeklyEmailSections(rankedEvents: RankedEvent[]): {
     const sourceKey = publicText(group.representative.sourceName);
     const venueOverCap = venueDiversityPossible && (venueCounts.get(venueKey) ?? 0) >= MAX_WEEKLY_HIGHLIGHTS_PER_VENUE;
     const sourceOverCap = sourceDiversityPossible && (sourceCounts.get(sourceKey) ?? 0) >= MAX_WEEKLY_HIGHLIGHTS_PER_SOURCE;
+    const seasonalOutdoorCount = highlights.filter((item) => isLargeOutdoorSeasonalSource(item.representative)).length;
+    const seasonalOutdoorOverCap = isLargeOutdoorSeasonalSource(group.representative)
+      && seasonalOutdoorCount >= MAX_WEEKLY_HIGHLIGHTS_SEASONAL_OUTDOOR
+      && sortedGroups.slice(index + 1).some((candidate) => !isLargeOutdoorSeasonalSource(candidate.representative));
 
-    if (!venueOverCap && !sourceOverCap) {
+    if (!venueOverCap && !sourceOverCap && !seasonalOutdoorOverCap) {
       highlights.push(group);
       continue;
     }
@@ -780,7 +809,7 @@ export function selectWeeklyEmailSections(rankedEvents: RankedEvent[]): {
     const groupScore = getWeeklyHighlightGroupScore(group);
     const isMultiNightRun = new Set(group.events.map((event) => event.date)).size > 1;
 
-    if (isMultiNightRun && groupScore >= bestAlternativeScore + WEEKLY_DIVERSITY_OVERRIDE_GAP) {
+    if (!seasonalOutdoorOverCap && isMultiNightRun && groupScore >= bestAlternativeScore + WEEKLY_DIVERSITY_OVERRIDE_GAP) {
       highlights.push(group);
     }
   }
@@ -797,6 +826,9 @@ export function selectWeeklyEmailSections(rankedEvents: RankedEvent[]): {
     const sourceCounts = countBy(alsoWorthALook, (item) => publicText(item.representative.sourceName));
     const combinedVenueCounts = countBy([...highlights, ...alsoWorthALook], (item) => publicText(item.representative.venue));
     const combinedSourceCounts = countBy([...highlights, ...alsoWorthALook], (item) => publicText(item.representative.sourceName));
+    const combinedSeasonalOutdoorCount = [...highlights, ...alsoWorthALook]
+      .filter((item) => isLargeOutdoorSeasonalSource(item.representative))
+      .length;
     const venueKey = publicText(group.representative.venue);
     const sourceKey = publicText(group.representative.sourceName);
 
@@ -805,6 +837,10 @@ export function selectWeeklyEmailSections(rankedEvents: RankedEvent[]): {
       || (sourceCounts.get(sourceKey) ?? 0) >= MAX_WEEKLY_ALSO_WORTH_PER_SOURCE
       || (combinedVenueCounts.get(venueKey) ?? 0) >= MAX_WEEKLY_TOP_SECTIONS_PER_VENUE
       || (combinedSourceCounts.get(sourceKey) ?? 0) >= MAX_WEEKLY_TOP_SECTIONS_PER_SOURCE
+      || (
+        isLargeOutdoorSeasonalSource(group.representative)
+        && combinedSeasonalOutdoorCount >= MAX_WEEKLY_TOP_SECTIONS_SEASONAL_OUTDOOR
+      )
     ) {
       continue;
     }

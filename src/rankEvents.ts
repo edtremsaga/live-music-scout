@@ -53,6 +53,11 @@ function addVenueAwareScoring(blob: string, matchReasons: string[]): number {
     matchReasons.push("Barboza often surfaces intimate Capitol Hill touring and local club shows");
   }
 
+  if (blob.includes("chop suey")) {
+    score += 2;
+    matchReasons.push("Chop Suey often surfaces Capitol Hill touring, local, and genre-club shows");
+  }
+
   if (
     blob.includes("the paramount theatre")
     || blob.includes("the moore theatre")

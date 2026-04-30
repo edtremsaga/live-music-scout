@@ -43,6 +43,17 @@
     "notes": "Live parser reads public static Carbonhouse event rows from the Barboza events page"
   },
   {
+    "name": "Chop Suey",
+    "url": "https://chopsuey.com/tm-venue/chop-suey/",
+    "parser": "chopSuey",
+    "location": "Seattle, WA",
+    "areaTags": ["Seattle", "Capitol Hill"],
+    "sourceType": "venue",
+    "musicOnly": true,
+    "parserStatus": "live",
+    "notes": "Live parser reads public TicketWeb-powered event rows from the official Chop Suey venue page"
+  },
+  {
     "name": "The Royal Room",
     "url": "https://theroyalroomseattle.com/events/",
     "parser": "royalRoom",

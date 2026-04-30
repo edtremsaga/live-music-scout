@@ -30,6 +30,7 @@ test("configured allowlist includes the new venue and seasonal sources", () => {
   assert.equal(names.has("KEXP Events"), true);
   assert.equal(names.has("Neumos"), true);
   assert.equal(names.has("Barboza"), true);
+  assert.equal(names.has("Chop Suey"), true);
 });
 
 test("The Triple Door is configured as a live parsed venue source", () => {
@@ -85,6 +86,20 @@ test("Neumos and Barboza are configured as live parsed Capitol Hill venue source
   assert.equal(barboza.musicOnly, true);
   assert.equal(barboza.areaTags?.includes("Capitol Hill"), true);
   assert.match(barboza.notes ?? "", /public static Carbonhouse event rows/i);
+});
+
+test("Chop Suey is configured as a live parsed Capitol Hill venue source", () => {
+  const sources = loadSources();
+  const chopSuey = sources.find((source) => source.name === "Chop Suey");
+
+  assert.ok(chopSuey);
+  assert.equal(chopSuey.url, "https://chopsuey.com/tm-venue/chop-suey/");
+  assert.equal(chopSuey.parser, "chopSuey");
+  assert.equal(chopSuey.parserStatus, "live");
+  assert.equal(chopSuey.sourceType, "venue");
+  assert.equal(chopSuey.musicOnly, true);
+  assert.equal(chopSuey.areaTags?.includes("Capitol Hill"), true);
+  assert.match(chopSuey.notes ?? "", /public TicketWeb-powered event rows/i);
 });
 
 test("Nectar Lounge, Hidden Hall, and Skylark Cafe are configured as live parsed venue sources", () => {

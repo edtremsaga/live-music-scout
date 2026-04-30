@@ -273,6 +273,11 @@ export function classifyEvent(event: LiveMusicEvent): ClassifiedEvent {
     reasons.push("Barboza is a credible Capitol Hill live-music source");
   }
 
+  if (event.venue === "Chop Suey" || event.sourceName === "Chop Suey") {
+    musicScore += 3;
+    reasons.push("Chop Suey is a credible Capitol Hill live-music source");
+  }
+
   if (event.venue === "Bake's Place" || event.sourceName === "Bake's Place") {
     musicScore += 3;
     reasons.push("Bake's Place is a credible listening-room music source");

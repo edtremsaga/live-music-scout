@@ -122,7 +122,7 @@ test("Skylark multi-band listing classifies as music", () => {
   assert.equal(classified.classification.eventType, "music");
 });
 
-test("Neumos and Barboza club listings classify as music", () => {
+test("Neumos, Barboza, and Chop Suey club listings classify as music", () => {
   const neumos = classifyEvent(makeEvent({
     title: "Grace Ives",
     venue: "Neumos",
@@ -137,11 +137,20 @@ test("Neumos and Barboza club listings classify as music", () => {
     genreHints: ["live music", "Capitol Hill club", "supporting artists"],
     url: "https://www.thebarboza.com/events/detail/daniel-romanos-outfit-tickets-1352175"
   }));
+  const chopSuey = classifyEvent(makeEvent({
+    title: "Beautiful Freaks, Universe, Casino Youth, Fatal Femmes, Nerve Rot",
+    venue: "Chop Suey",
+    sourceName: "Chop Suey",
+    genreHints: ["live music", "Capitol Hill club"],
+    url: "https://chopsuey.com/tm-event/beautiful-freaks/"
+  }));
 
   assert.equal(neumos.classification.isLikelyMusic, true);
   assert.equal(neumos.classification.eventType, "music");
   assert.equal(barboza.classification.isLikelyMusic, true);
   assert.equal(barboza.classification.eventType, "music");
+  assert.equal(chopSuey.classification.isLikelyMusic, true);
+  assert.equal(chopSuey.classification.eventType, "music");
 });
 
 test("Kerry Hall yoga/class style STG listing stays out of likely music", () => {
