@@ -254,7 +254,9 @@ function formatCoverageStatus(source: SourceConfig, status: SourceRunStatus | un
   }
 
   if (source.sourceType === "seasonal_outdoor") {
-    return "Seasonal TODO";
+    return source.parserStatus === "live" && source.parser !== "configuredTodo"
+      ? "Live seasonal source outside report window"
+      : "Seasonal TODO";
   }
 
   if (source.sourceType === "large_venue") {
@@ -309,7 +311,22 @@ function buildCoverageGapSections(result: ScoutRunResult): CoverageGapSection[] 
     )
     .map((source) => makeCoverageGap(source, getSourceStatus(result.statuses, source.name)));
   const seasonalOutdoor = sources
-    .filter((source) => source.sourceType === "seasonal_outdoor")
+    .filter(
+      (source) =>
+        source.sourceType === "seasonal_outdoor"
+        && (source.parserStatus === "todo" || source.parser === "configuredTodo")
+    )
+    .map((source) => makeCoverageGap(source, getSourceStatus(result.statuses, source.name)));
+  const liveSeasonalOutsideWindow = sources
+    .filter((source) => {
+      const status = getSourceStatus(result.statuses, source.name);
+      return source.sourceType === "seasonal_outdoor"
+        && source.parserStatus === "live"
+        && source.parser !== "configuredTodo"
+        && status?.fetchStatus === "fetched"
+        && status.candidateCount > 0
+        && status.matchedCount === 0;
+    })
     .map((source) => makeCoverageGap(source, getSourceStatus(result.statuses, source.name)));
   const largeVenue = sources
     .filter((source) => source.sourceType === "large_venue")
@@ -324,6 +341,7 @@ function buildCoverageGapSections(result: ScoutRunResult): CoverageGapSection[] 
 
   return [
     { title: "Tracked but not feeding emails", gaps: trackedButNotFeeding },
+    { title: "Live seasonal sources outside report window", gaps: liveSeasonalOutsideWindow },
     { title: "Seasonal / future parser sources", gaps: seasonalOutdoor },
     { title: "Large venue gaps", gaps: largeVenue },
     { title: "Promoter coverage caveats", gaps: promoterCaveats }
@@ -338,6 +356,7 @@ function formatCoverageSummary(result: ScoutRunResult, coverageGapSections: Cove
   return [
     `Live parsed sources feeding emails: ${liveFeedingCount}`,
     `Tracked venue sources not feeding emails: ${getGapCount("Tracked but not feeding emails")}`,
+    `Live seasonal sources outside report window: ${getGapCount("Live seasonal sources outside report window")}`,
     `Seasonal/future parser sources: ${getGapCount("Seasonal / future parser sources")}`,
     `Large venue gaps: ${getGapCount("Large venue gaps")}`
   ];

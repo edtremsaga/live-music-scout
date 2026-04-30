@@ -72,14 +72,24 @@ function makeScoutRunResult(overrides: Partial<ScoutRunResult> = {}): ScoutRunRe
           "parser TODO: Easy Street Records official events page currently returns CloudFront 403 in the first-pass fetch path; public third-party listings are not reliable enough for automated venue coverage, so this needs a better official source or a manual-events fallback"
       },
       {
-        name: "Marymoor Park Concerts",
-        url: "https://www.marymoorlive.com/",
+        name: "Remlinger Farms Summer Concerts",
+        url: "https://remlingerfarms.com/remlinger-summer-concerts/",
         parser: "configuredTodo",
         sourceType: "seasonal_outdoor",
         musicOnly: true,
         seasonal: true,
         parserStatus: "todo",
-        notes: "parser TODO: Marymoor Park Concerts is configured as an outdoor summer music series source, but a reliable parser is not implemented yet"
+        notes: "parser TODO: public Remlinger concert/calendar pages currently expose an EventON calendar shell rather than stable static concert rows; if a reliable public parser is added, dedupe against STG-covered Remlinger events"
+      },
+      {
+        name: "Marymoor Park Concerts",
+        url: "https://www.marymoorlive.com/",
+        parser: "marymoor",
+        sourceType: "seasonal_outdoor",
+        musicOnly: true,
+        seasonal: true,
+        parserStatus: "live",
+        notes: "Live parser reads public static event rows from the Marymoor Live concert page"
       },
       {
         name: "Climate Pledge Arena",
@@ -134,7 +144,7 @@ function makeScoutRunResult(overrides: Partial<ScoutRunResult> = {}): ScoutRunRe
         parserConfidence: "Low"
       },
       {
-        sourceName: "Marymoor Park Concerts",
+        sourceName: "Remlinger Farms Summer Concerts",
         parserName: "configuredTodo",
         ok: true,
         fetchStatus: "skipped",
@@ -142,6 +152,17 @@ function makeScoutRunResult(overrides: Partial<ScoutRunResult> = {}): ScoutRunRe
         candidateCount: 0,
         matchedCount: 0,
         matchedLabel: "tonight"
+      },
+      {
+        sourceName: "Marymoor Park Concerts",
+        parserName: "marymoor",
+        ok: true,
+        fetchStatus: "fetched",
+        message: "parsed Marymoor Live public concert rows",
+        candidateCount: 6,
+        matchedCount: 0,
+        matchedLabel: "tonight",
+        parserConfidence: "High"
       },
       {
         sourceName: "Climate Pledge Arena",
@@ -184,6 +205,8 @@ test("verification email uses readable email-style text sections", () => {
   assert.match(report.text, /- Status: OK/);
   assert.match(report.text, /- Live parsed sources feeding emails: 1/);
   assert.match(report.text, /- Tracked venue sources not feeding emails: 2/);
+  assert.match(report.text, /- Live seasonal sources outside report window: 1/);
+  assert.match(report.text, /- Seasonal\/future parser sources: 1/);
   assert.match(report.text, /- Tier note: Top curated section\./);
   assert.match(report.text, /- Source health: The Royal Room fetched, High confidence/);
   assert.match(report.text, /- Recommendation: Go/);
@@ -213,7 +236,9 @@ test("verification email reports tracked sources that are not feeding emails", (
     /Easy Street Records — Not feeding emails — fetched, 0 parsed, 0 tonight; official events page blocks first-pass fetch; needs a better official source or manual-events fallback/
   );
   assert.match(report.text, /### Seasonal \/ future parser sources/);
-  assert.match(report.text, /Marymoor Park Concerts — Seasonal TODO — tracked, not parsed yet; seasonal; seasonal outdoor parser not built yet/);
+  assert.match(report.text, /Remlinger Farms Summer Concerts — Seasonal TODO — tracked, not parsed yet; seasonal; public Remlinger concert\/calendar pages currently expose an EventON calendar shell rather than stable static concert rows/);
+  assert.match(report.text, /### Live seasonal sources outside report window/);
+  assert.match(report.text, /Marymoor Park Concerts — Live seasonal source outside report window — fetched, 6 parsed, 0 tonight; seasonal; Live parser reads public static event rows from the Marymoor Live concert page/);
   assert.match(report.text, /### Large venue gaps/);
   assert.match(report.text, /Climate Pledge Arena — Large venue TODO — tracked, not parsed yet; needs music-only filtering/);
   assert.match(report.text, /### Promoter coverage caveats/);
