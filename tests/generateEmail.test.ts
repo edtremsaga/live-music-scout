@@ -162,6 +162,16 @@ test("Conor Byrne Pub URL gets Conor Byrne event page label", () => {
   assert.equal(getSourceLinkLabel(event), "Conor Byrne event page");
 });
 
+test("The Crocodile TicketWeb URL gets Crocodile event page label", () => {
+  const event = makeRankedEvent({
+    sourceName: "The Crocodile",
+    venue: "Madame Lou's",
+    url: "https://www.ticketweb.com/event/ground-zero-madame-lous-tickets/2"
+  });
+
+  assert.equal(getSourceLinkLabel(event), "The Crocodile/TicketWeb event page");
+});
+
 test("El Corazon URL gets El Corazon/Funhouse event page label", () => {
   const event = makeRankedEvent({
     sourceName: "El Corazon",
@@ -232,6 +242,16 @@ test("KEXP URL gets KEXP event page label", () => {
   assert.equal(getSourceLinkLabel(event), "KEXP event page");
 });
 
+test("Climate Pledge Ticketmaster URL gets Climate Pledge source label", () => {
+  const event = makeRankedEvent({
+    sourceName: "Climate Pledge Arena",
+    venue: "Climate Pledge Arena",
+    url: "https://www.ticketmaster.com/florence-the-machine-seattle-washington-05-12-2026/event/0F0062E2"
+  });
+
+  assert.equal(getSourceLinkLabel(event), "Climate Pledge/Ticketmaster event page");
+});
+
 test("fallback URL gets Event page label", () => {
   const event = makeRankedEvent({
     url: "https://example.com/events/test"
@@ -273,7 +293,7 @@ test("generic daily why-line keeps tonight wording", () => {
 
   const output = generateEmailPreview(new Date("2026-04-25T19:00:00-07:00"), [event]);
 
-  assert.match(output, /Why it looks good: Looks like a plausible live-music option for tonight/);
+  assert.match(output, /Why it looks good: Looks like a decent live-music option for tonight/);
 });
 
 test("SeaMonster highlights use venue-specific why-line wording", () => {
@@ -288,7 +308,7 @@ test("SeaMonster highlights use venue-specific why-line wording", () => {
 
   const output = generateEmailPreview(new Date("2026-04-29T12:00:00-07:00"), [event]);
 
-  assert.match(output, /Why it looks good: A SeaMonster Lounge club set with Wallingford funk, soul, jazz, and improv energy/);
+  assert.match(output, /Why it looks good: A solid SeaMonster show/);
 });
 
 test("Neumos and Barboza highlights use venue-specific why-line wording", () => {
@@ -311,8 +331,8 @@ test("Neumos and Barboza highlights use venue-specific why-line wording", () => 
 
   const output = generateEmailPreview(new Date("2026-05-01T12:00:00-07:00"), [neumos, barboza]);
 
-  assert.match(output, /Why it looks good: A Capitol Hill club show at Neumos/);
-  assert.match(output, /Why it looks good: A downstairs Barboza club show/);
+  assert.match(output, /Why it looks good: Touring club show at Neumos\./);
+  assert.match(output, /Why it looks good: Nice early-evening option\./);
 });
 
 test("Chop Suey highlights use venue-specific why-line wording", () => {
@@ -327,7 +347,7 @@ test("Chop Suey highlights use venue-specific why-line wording", () => {
 
   const output = generateEmailPreview(new Date("2026-04-30T12:00:00-07:00"), [event]);
 
-  assert.match(output, /Why it looks good: A Chop Suey club show/);
+  assert.match(output, /Why it looks good: Good Capitol Hill club show\./);
 });
 
 test("Conor Byrne Pub highlights use venue-specific why-line wording", () => {
@@ -342,7 +362,152 @@ test("Conor Byrne Pub highlights use venue-specific why-line wording", () => {
 
   const output = generateEmailPreview(new Date("2026-04-30T12:00:00-07:00"), [event]);
 
-  assert.match(output, /Why it looks good: A Conor Byrne Pub club show/);
+  assert.match(output, /Why it looks good: Good Ballard pub show\./);
+});
+
+test("The Crocodile highlights use venue-specific why-line wording", () => {
+  const event = makeRankedEvent({
+    title: "Moonchild, Brittney Carter",
+    sourceName: "The Crocodile",
+    venue: "The Crocodile",
+    date: "2026-05-01",
+    time: "8:00 PM",
+    url: "https://www.ticketweb.com/event/moonchild-the-crocodile-tickets/1"
+  });
+
+  const output = generateEmailPreview(new Date("2026-05-01T12:00:00-07:00"), [event]);
+
+  assert.match(output, /Why it looks good: Touring club show at Belltown\./);
+});
+
+test("Climate Pledge highlights use big-arena why-line wording", () => {
+  const event = makeRankedEvent({
+    title: "Florence + The Machine",
+    sourceName: "Climate Pledge Arena",
+    venue: "Climate Pledge Arena",
+    date: "2026-05-12",
+    time: "7:30 PM",
+    url: "https://www.ticketmaster.com/florence-the-machine-seattle-washington-05-12-2026/event/0F0062E2"
+  });
+
+  const output = generateEmailPreview(new Date("2026-05-12T12:00:00-07:00"), [event]);
+
+  assert.match(output, /Why it looks good: Big touring show\. Good if you already like the artist\./);
+});
+
+test("why-lines use event-specific release and tribute cues before venue boilerplate", () => {
+  const albumRelease = makeRankedEvent({
+    id: "album-release",
+    title: "Guest Directors (Album Release) with Model Shop",
+    artist: "Guest Directors (Album Release) with Model Shop",
+    sourceName: "Conor Byrne Pub",
+    venue: "Conor Byrne Pub",
+    date: "2026-05-02",
+    time: "9:00 PM",
+    url: "https://www.conorbyrnepub.com/#/events/album"
+  });
+  const tribute = makeRankedEvent({
+    id: "tribute",
+    title: "Big Thief Tribute Night",
+    artist: "Big Thief Tribute Night",
+    sourceName: "Conor Byrne Pub",
+    venue: "Conor Byrne Pub",
+    date: "2026-05-07",
+    time: "8:00 PM",
+    url: "https://www.conorbyrnepub.com/#/events/tribute"
+  });
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-05-01T12:00:00-07:00"),
+    [albumRelease, tribute],
+    "2026-05-01",
+    "2026-05-08"
+  );
+
+  assert.match(output, /Why it looks good: Cool album release party at Conor Byrne\./);
+  assert.match(output, /Why it looks good: If you like Big Thief, this could be a fun one at Conor Byrne\./);
+});
+
+test("why-lines vary repeated same-venue stems inside one section", () => {
+  const first = makeRankedEvent({
+    id: "sea-one",
+    title: "SeaMonster One",
+    artist: "SeaMonster One",
+    sourceName: "SeaMonster Lounge",
+    venue: "SeaMonster Lounge",
+    date: "2026-05-01",
+    time: "7:30 PM",
+    url: "https://www.seamonsterlounge.com/event-info/one",
+    score: 30
+  });
+  const second = makeRankedEvent({
+    id: "sea-two",
+    title: "SeaMonster Two",
+    artist: "SeaMonster Two",
+    sourceName: "SeaMonster Lounge",
+    venue: "SeaMonster Lounge",
+    date: "2026-05-01",
+    time: "8:30 PM",
+    url: "https://www.seamonsterlounge.com/event-info/two",
+    score: 29
+  });
+
+  const output = generateEmailPreview(new Date("2026-05-01T12:00:00-07:00"), [first, second]);
+  const whyLines = Array.from(output.matchAll(/Why it looks good: (.*)/g), (match) => match[1]);
+
+  assert.equal(whyLines.length, 2);
+  assert.notEqual(whyLines[0], whyLines[1]);
+  assert.match(whyLines[0], /A solid SeaMonster show/);
+  assert.match(whyLines[1], /Good SeaMonster show/);
+});
+
+test("why-lines avoid banned editorial phrases", () => {
+  const events = [
+    makeRankedEvent({
+      id: "album-release-copy",
+      title: "Guest Directors (Album Release) with Model Shop",
+      artist: "Guest Directors (Album Release) with Model Shop",
+      sourceName: "Conor Byrne Pub",
+      venue: "Conor Byrne Pub",
+      date: "2026-05-02",
+      time: "9:00 PM",
+      url: "https://www.conorbyrnepub.com/#/events/album",
+      score: 25
+    }),
+    makeRankedEvent({
+      id: "tribute-copy",
+      title: "Fire to Wolves, Harsh Reality (A tribute to WEEN)",
+      artist: "Fire to Wolves, Harsh Reality (A tribute to WEEN)",
+      sourceName: "Skylark Cafe",
+      venue: "Skylark Cafe",
+      date: "2026-05-03",
+      time: "7:00 PM",
+      url: "https://www.skylarkcafe.com/global-events/fire-to-wolves",
+      score: 24
+    }),
+    makeRankedEvent({
+      id: "late-copy",
+      title: "Funky 2 Death",
+      artist: "Funky 2 Death",
+      sourceName: "SeaMonster Lounge",
+      venue: "SeaMonster Lounge",
+      date: "2026-05-04",
+      time: "10:00 PM",
+      url: "https://www.seamonsterlounge.com/event-info/funky",
+      score: 23
+    })
+  ];
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-05-01T12:00:00-07:00"),
+    events,
+    "2026-05-01",
+    "2026-05-08"
+  );
+  const whyText = Array.from(output.matchAll(/Why it looks good: (.*)/g), (match) => match[1].toLowerCase()).join("\n");
+
+  assert.match(output, /Why it looks good: If you like WEEN, this could be a fun one at Skylark\./);
+  assert.doesNotMatch(whyText, /supported by|lane|occasion energy|nightlife-shaped|discovery upside|compelling|elevated|robust|standout|worth a look|strong option|musicianship-first|crowd energy|vibe|local-scene feel|source material|single release show/);
 });
 
 test("generic weekly why-line uses this-week wording", () => {
@@ -359,8 +524,8 @@ test("generic weekly why-line uses this-week wording", () => {
     "2026-05-02"
   );
 
-  assert.match(output, /Why it looks good: Looks like a plausible live-music option for this week/);
-  assert.doesNotMatch(output, /Why it looks good: Looks like a plausible live-music option for tonight/);
+  assert.match(output, /Why it looks good: Looks like a decent live-music option for this week/);
+  assert.doesNotMatch(output, /Why it looks good: Looks like a decent live-music option for tonight/);
 });
 
 test("daily preview separates Go highlights from Maybe also-worth-checking items", () => {
@@ -1095,19 +1260,19 @@ test("weekly top sections apply combined venue caps across highlights and also w
   assert.match(topSections, /### The Royal Room Pick/);
 });
 
-test("weekly highlights apply a large outdoor seasonal cap when club alternatives exist", () => {
+test("weekly highlights apply a large-scale concert cap when club alternatives exist", () => {
   const outdoorEvents = [
     ["Marymoor Park Concerts", "Marymoor Park"],
     ["Chateau Ste. Michelle Summer Concerts", "Chateau Ste. Michelle Amphitheatre"],
     ["Woodland Park Zoo / ZooTunes", "Woodland Park Zoo"],
-    ["Marymoor Park Concerts", "Marymoor Park"]
+    ["Climate Pledge Arena", "Climate Pledge Arena"]
   ].map(([sourceName, venue], index) => makeRankedEvent({
-    id: `outdoor-${index + 1}`,
-    title: `Outdoor Pick ${index + 1}`,
-    artist: `Outdoor Pick ${index + 1}`,
+    id: `large-scale-${index + 1}`,
+    title: `Large-Scale Pick ${index + 1}`,
+    artist: `Large-Scale Pick ${index + 1}`,
     venue,
     sourceName,
-    url: `https://example.com/outdoor-${index + 1}`,
+    url: `https://example.com/large-scale-${index + 1}`,
     date: `2026-06-0${index + 1}`,
     score: 40 - index,
     verdict: "Go"
@@ -1133,8 +1298,8 @@ test("weekly highlights apply a large outdoor seasonal cap when club alternative
   const highlightsSection = output.slice(output.indexOf("## This Week’s Highlights"), output.indexOf("## Also Worth a Look"));
   const topSections = output.slice(output.indexOf("## This Week’s Highlights"), output.indexOf("## Evaluated Shows by Day"));
 
-  assert.equal((highlightsSection.match(/### Outdoor Pick/g) ?? []).length, 2);
-  assert.equal((topSections.match(/### Outdoor Pick/g) ?? []).length, 3);
+  assert.equal((highlightsSection.match(/### Large-Scale Pick/g) ?? []).length, 2);
+  assert.equal((topSections.match(/### Large-Scale Pick/g) ?? []).length, 3);
   assert.match(highlightsSection, /### Tractor Tavern Pick/);
   assert.match(highlightsSection, /### The Royal Room Pick/);
 });

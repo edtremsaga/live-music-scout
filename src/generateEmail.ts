@@ -20,8 +20,8 @@ const MAX_WEEKLY_HIGHLIGHTS_PER_VENUE = 2;
 const MAX_WEEKLY_HIGHLIGHTS_PER_SOURCE = 2;
 const MAX_WEEKLY_TOP_SECTIONS_PER_VENUE = 3;
 const MAX_WEEKLY_TOP_SECTIONS_PER_SOURCE = 3;
-const MAX_WEEKLY_HIGHLIGHTS_SEASONAL_OUTDOOR = 2;
-const MAX_WEEKLY_TOP_SECTIONS_SEASONAL_OUTDOOR = 3;
+const MAX_WEEKLY_HIGHLIGHTS_LARGE_SCALE = 2;
+const MAX_WEEKLY_TOP_SECTIONS_LARGE_SCALE = 3;
 const WEEKLY_DIVERSITY_OVERRIDE_GAP = 1;
 
 function escapeHtml(value: string): string {
@@ -78,18 +78,20 @@ function isMixedFormatPerformance(event: RankedEvent): boolean {
   return blob.includes("dina martina");
 }
 
-function isLargeOutdoorSeasonalSource(event: Pick<RankedEvent, "sourceName" | "venue">): boolean {
+function isLargeScaleConcertSource(event: Pick<RankedEvent, "sourceName" | "venue">): boolean {
   return [
     "Marymoor Park Concerts",
     "Chateau Ste. Michelle Summer Concerts",
     "Woodland Park Zoo / ZooTunes",
-    "Remlinger Farms Summer Concerts"
+    "Remlinger Farms Summer Concerts",
+    "Climate Pledge Arena"
   ].includes(event.sourceName)
     || [
       "Marymoor Park",
       "Chateau Ste. Michelle Amphitheatre",
       "Woodland Park Zoo",
-      "Remlinger Farms"
+      "Remlinger Farms",
+      "Climate Pledge Arena"
     ].includes(event.venue);
 }
 
@@ -98,6 +100,10 @@ export function getSourceLinkLabel(event: Pick<RankedEvent, "url" | "sourceName"
 
   if (event.venue === "Tractor Tavern" || event.sourceName === "Tractor Tavern") {
     return "Tractor/TicketWeb listing";
+  }
+
+  if (event.sourceName === "The Crocodile" || event.venue === "The Crocodile" || event.venue === "Madame Lou's" || event.venue === "Here - After" || url.includes("ticketweb.com/events/org/243963")) {
+    return "The Crocodile/TicketWeb event page";
   }
 
   if (url.includes("ticketweb.com")) {
@@ -180,6 +186,10 @@ export function getSourceLinkLabel(event: Pick<RankedEvent, "url" | "sourceName"
     return "KEXP event page";
   }
 
+  if (event.sourceName === "Climate Pledge Arena" || event.venue === "Climate Pledge Arena" || url.includes("climate-pledge-arena")) {
+    return "Climate Pledge/Ticketmaster event page";
+  }
+
   if (event.sourceName === "STG Presents" || url.includes("stgpresents.org")) {
     return "STG event page";
   }
@@ -207,88 +217,355 @@ function formatVerdict(verdict: RankedEvent["verdict"]): string {
   return "Skip — probably not the kind of live music night this scout is looking for.";
 }
 
-function buildWhyLine(event: RankedEvent, timeframe = "tonight"): string {
+type EventTag =
+  | "album_release"
+  | "single_release"
+  | "ep_release"
+  | "tribute"
+  | "legacy_act"
+  | "touring_act"
+  | "local_bill"
+  | "multi_band_bill"
+  | "seated_show"
+  | "dance_night"
+  | "dj_night"
+  | "early_show"
+  | "late_show"
+  | "benefit"
+  | "open_mic"
+  | "jam_night"
+  | "mixed_format";
+
+type WhyLineContext = {
+  usedStems: Map<string, number>;
+};
+
+function createWhyLineContext(): WhyLineContext {
+  return { usedStems: new Map() };
+}
+
+function hasBillSeparator(title: string): boolean {
+  return /,|\/\/|\+|&|\bw\/\b|\bwith\b|\bfeat\.?\b/i.test(title);
+}
+
+function getEventHour(event: RankedEvent): number | undefined {
+  const match = publicText(event.time).match(/\b(\d{1,2})(?::\d{2})?\s*(AM|PM)\b/i);
+  if (!match) {
+    return undefined;
+  }
+
+  const rawHour = Number(match[1]);
+  const period = match[2].toUpperCase();
+
+  if (period === "AM") {
+    return rawHour === 12 ? 0 : rawHour;
+  }
+
+  return rawHour === 12 ? 12 : rawHour + 12;
+}
+
+function inferEventTags(event: RankedEvent): EventTag[] {
+  const blob = getEventTextBlob(event);
+  const title = publicText(event.artist ?? event.title);
+  const titleLower = title.toLowerCase();
+  const tags: EventTag[] = [];
+
+  if (/\b(album release|record release|release show)\b/i.test(blob)) tags.push("album_release");
+  if (/\bsingle release\b/i.test(blob)) tags.push("single_release");
+  if (/\bep release\b/i.test(blob)) tags.push("ep_release");
+  if (/\btribute|plays the music of|songs of\b/i.test(blob)) tags.push("tribute");
+  if (/\blegacy|all-?stars|sinatra|dylan|chicago legacy\b/i.test(blob)) tags.push("legacy_act");
+  if (/\bbenefit|fundraiser\b/i.test(blob)) tags.push("benefit");
+  if (/\bopen mic|song share\b/i.test(titleLower)) tags.push("open_mic");
+  if (/\bjam night|mo' jam|jam mondays|weinstein wednesday\b/i.test(titleLower)) tags.push("jam_night");
+  if (/\bdance night|club night|karaoke|k-?pop|edm|disco\b/i.test(titleLower)) tags.push("dance_night");
+  if (/\bdj\b/i.test(titleLower)) tags.push("dj_night");
+  if (isMixedFormatPerformance(event) || /\bcomedy|cabaret|dating show\b/i.test(titleLower)) tags.push("mixed_format");
+  if (
+    event.venue === "Dimitriou's Jazz Alley"
+    || event.venue === "The Triple Door"
+    || event.venue === "Bake's Place"
+    || event.sourceName === "Chateau Ste. Michelle Summer Concerts"
+    || event.sourceName === "Marymoor Park Concerts"
+    || event.sourceName === "Woodland Park Zoo / ZooTunes"
+  ) {
+    tags.push("seated_show");
+  }
+  if (hasBillSeparator(title)) tags.push("multi_band_bill");
+  if (isLocalBandBill(event)) tags.push("local_bill");
+  if (event.sourceName === "STG Presents" || event.sourceName === "Climate Pledge Arena" || event.venue === "Neumos" || event.venue === "The Crocodile") {
+    tags.push("touring_act");
+  }
+
+  const hour = getEventHour(event);
+  if (hour !== undefined && hour < 19) tags.push("early_show");
+  if (hour !== undefined && hour >= 22) tags.push("late_show");
+
+  return Array.from(new Set(tags));
+}
+
+function getPrimaryEventTag(tags: EventTag[]): EventTag | undefined {
+  const priority: EventTag[] = [
+    "album_release",
+    "single_release",
+    "ep_release",
+    "tribute",
+    "benefit",
+    "open_mic",
+    "jam_night",
+    "dance_night",
+    "dj_night",
+    "mixed_format",
+    "legacy_act",
+    "seated_show",
+    "multi_band_bill",
+    "local_bill",
+    "touring_act",
+    "early_show",
+    "late_show"
+  ];
+
+  return priority.find((tag) => tags.includes(tag));
+}
+
+function getEventLead(tag: EventTag | undefined, event: RankedEvent): string | undefined {
+  switch (tag) {
+    case "album_release":
+      return getReleaseLine(event, "album");
+    case "single_release":
+      return getReleaseLine(event, "single");
+    case "ep_release":
+      return getReleaseLine(event, "EP");
+    case "tribute":
+      return getTributeLine(event);
+    case "benefit":
+      return getShortVenuePhrase(event, "Benefit concert.");
+    case "open_mic":
+      return "Open mic night. Good if you want something casual.";
+    case "jam_night":
+      return "Jam night. Good if you want something loose and player-led.";
+    case "dance_night":
+      return "Dance night. Check this one if you want a party more than a concert.";
+    case "dj_night":
+      return "DJ night. Good only if that is the kind of night you want.";
+    case "mixed_format":
+      return "Mixed-format event. Check the details before you go.";
+    case "legacy_act":
+      return getShortVenuePhrase(event, "Good choice if you want polished music.");
+    case "seated_show":
+      return getShortVenuePhrase(event, "Good choice if you want a sit-down show.");
+    case "multi_band_bill":
+      return getShortVenuePhrase(event, "Multi-band bill.");
+    case "local_bill":
+      return getShortVenuePhrase(event, "Local-band bill.");
+    case "touring_act":
+      return isLargeScaleConcertSource(event)
+        ? "Big touring show. Good if you already like the artist."
+        : getShortVenuePhrase(event, "Touring club show.");
+    case "early_show":
+      return "Nice early-evening option.";
+    case "late_show":
+      return getLateShowLine(event);
+    default:
+      return undefined;
+  }
+}
+
+function getShortVenuePhrase(event: RankedEvent, fallback: string): string {
+  if (event.venue === "Tractor Tavern") return appendContext(fallback, "Tractor for a rootsier kind of night");
+  if (event.venue === "The Royal Room") return appendContext(fallback, "The Royal Room");
+  if (event.venue === "Bake's Place") return fallback === "Good choice if you want a sit-down show."
+    ? "Good Eastside pick for live music."
+    : appendContext(fallback, "Bake's Place");
+  if (event.venue === "Nectar Lounge") return appendContext(fallback, "Fremont");
+  if (event.venue === "Hidden Hall") return appendContext(fallback, "Fremont");
+  if (event.venue === "Dimitriou's Jazz Alley") return appendContext(fallback, "Jazz Alley");
+  if (event.venue === "The Triple Door") return appendContext(fallback, "The Triple Door");
+  if (event.venue === "Skylark Cafe") return appendContext(fallback, "Skylark");
+  if (event.venue === "Neumos") return appendContext(fallback, "Neumos");
+  if (event.venue === "Barboza") return appendContext(fallback, "Barboza");
+  if (event.venue === "Chop Suey") return appendContext(fallback, "Chop Suey");
+  if (event.venue === "Conor Byrne Pub") return appendContext(fallback, "Conor Byrne");
+  if (event.sourceName === "The Crocodile" || event.venue === "The Crocodile" || event.venue === "Madame Lou's") return appendContext(fallback, "Belltown");
+  if (event.venue === "Here - After") return `${fallback} Check the details since Here-After can be mixed-format.`;
+  if (event.venue === "SeaMonster Lounge") return appendContext(fallback, "SeaMonster");
+  if (event.sourceName === "Marymoor Park Concerts") return appendContext(fallback, "Marymoor");
+  if (event.sourceName === "Woodland Park Zoo / ZooTunes") return appendContext(fallback, "ZooTunes");
+  if (event.sourceName === "KEXP Events") return appendContext(fallback, "KEXP");
+  if (event.venue === "Climate Pledge Arena" || event.sourceName === "Climate Pledge Arena") return appendContext(fallback, "Climate Pledge");
+  if (event.sourceName === "STG Presents") return `${fallback} Good if you already like the artist.`;
+  if (event.sourceName === "Chateau Ste. Michelle Summer Concerts") return appendContext(fallback, "Chateau Ste. Michelle");
+  return fallback;
+}
+
+function appendContext(base: string, context: string): string {
+  const cleanBase = base.replace(/\.$/, "");
+  return `${cleanBase} at ${context}.`;
+}
+
+function getReleaseLine(event: RankedEvent, kind: "album" | "single" | "EP"): string {
+  if (kind === "album") {
+    if (event.venue === "Conor Byrne Pub") return "Cool album release party at Conor Byrne.";
+    if (event.venue === "Sunset Tavern") return "Cool album release show at Sunset.";
+    return getShortVenuePhrase(event, "Album release show.");
+  }
+
+  if (kind === "EP") {
+    return getShortVenuePhrase(event, "EP release night.");
+  }
+
+  const title = publicText(event.artist ?? event.title);
+  const artist = title.split(/\s+\(|\s+w\/|\s+with\s+|\s+\+|,/i)[0]?.trim();
+  if (artist && artist.length > 2 && artist.length < 80) {
+    return getShortVenuePhrase(event, `Good night to catch ${artist}.`);
+  }
+
+  return getShortVenuePhrase(event, "New single night.");
+}
+
+function getTributeLine(event: RankedEvent): string {
+  const title = publicText(event.artist ?? event.title);
+  const tributeTarget = title.match(/\btribute to\s+([^()+,]+?)(?:\s+featuring|\s+with|\)|$)/i)
+    ?? title.match(/\btribute.*?:\s*([^()+,]+)/i)
+    ?? title.match(/^(.+?)\s+tribute\b/i);
+  const artistName = publicText(tributeTarget?.[1]).replace(/\s+night$/i, "");
+  const subject = artistName || "this artist";
+
+  if (event.venue === "Skylark Cafe") return `If you like ${subject}, this could be a fun one at Skylark.`;
+  if (event.venue === "Conor Byrne Pub") return `If you like ${subject}, this could be a fun one at Conor Byrne.`;
+  return getShortVenuePhrase(event, "Tribute show.");
+}
+
+function getLateShowLine(event: RankedEvent): string {
+  if (event.venue === "SeaMonster Lounge") return "A solid late-night SeaMonster show.";
+  if (event.sourceName === "The Crocodile" || event.venue === "The Crocodile" || event.venue === "Madame Lou's") return "Good late-night Belltown show.";
+  if (event.venue === "Chop Suey") return "Good late-night Capitol Hill show.";
+  return getShortVenuePhrase(event, "Good late-night show.");
+}
+
+function getVenueFallbackLine(event: RankedEvent, timeframe: string, variantIndex: number): string {
   const titleLower = publicText(event.title).toLowerCase();
 
   if (event.venue === "Tractor Tavern") {
-    return titleLower.includes("album release")
-      ? "A rootsy album-release show at Tractor Tavern — the kind of small-room live music night that is usually worth a look."
-      : "A rootsy, guitar-forward show at Tractor Tavern — the kind of small-room live music night that is usually worth a look.";
+    return variantIndex % 2 === 0
+      ? "Good Tractor pick for a rootsier kind of night."
+      : "Good small-room show at Tractor.";
   }
 
   if (event.venue === "The Royal Room") {
     if (titleLower.includes("album release")) {
-      return "An album-release night at The Royal Room with a stronger musicianship-first feel than a generic listing.";
+      return "Album release at The Royal Room.";
     }
 
     return titleLower.includes("trio") || titleLower.includes("jammah") || titleLower.includes("jam")
-      ? "A likely groove/jam-oriented Royal Room show in a comfortable room with strong local-musician energy."
-      : "A Royal Room date that seems musically promising, though the listing itself is fairly light on detail.";
+      ? "Good Royal Room show if you want something loose and player-led."
+      : "Check the details if this Royal Room title grabs you.";
   }
 
   if (event.venue === "Bake's Place") {
-    return "An Eastside listening-room style booking at Bake’s Place — a good option if you want a Bellevue-area dinner-and-show night with strong musicianship.";
+    return variantIndex % 2 === 0
+      ? "Good Eastside pick for live music."
+      : "Good Bellevue dinner-and-show option.";
   }
 
   if (event.venue === "Nectar Lounge") {
-    return "A Nectar Lounge booking with strong club-show energy — worth a look if you want a fuller Fremont room and a more groove-forward night.";
+    return variantIndex % 2 === 0
+      ? "Good Fremont club show."
+      : "Good Nectar show if you want a bigger room.";
   }
 
   if (event.venue === "Hidden Hall") {
-    return "A Hidden Hall booking with a bigger Fremont-room feel — promising if you want a ticketed club night built around the artist lineup.";
+    return "Good Fremont club show.";
   }
 
   if (event.venue === "Dimitriou's Jazz Alley") {
-    return "A seated Jazz Alley date with a strong musicianship-first feel — a good option if you want a more focused listening-room night.";
+    return "Good choice if you want polished music at Jazz Alley.";
   }
 
   if (event.venue === "The Triple Door") {
-    return "A seated Triple Door show with strong listening-room potential — a good option if you want a more focused downtown concert night.";
+    return "Good sit-down downtown show.";
   }
 
   if (event.venue === "Skylark Cafe") {
-    return "A local-band Skylark night with strong West Seattle club energy — a good option if you want something smaller, scrappier, and close to the neighborhood scene.";
+    return variantIndex % 2 === 0
+      ? "Good smaller West Seattle show."
+      : "Good Skylark show if you want a neighborhood room.";
   }
 
   if (event.venue === "Neumos") {
-    return "A Capitol Hill club show at Neumos — worth a look when you want a larger small-room touring or local bill.";
+    return "Good Capitol Hill club show.";
   }
 
   if (event.venue === "Barboza") {
-    return "A downstairs Barboza club show — a good option if you want a tighter Capitol Hill room for newer touring or local acts.";
+    return "Good smaller Capitol Hill show.";
   }
 
   if (event.venue === "Chop Suey") {
-    return "A Chop Suey club show — worth a look for Capitol Hill local bills, touring acts, and louder genre nights.";
+    return "Good Capitol Hill club show.";
   }
 
   if (event.venue === "Conor Byrne Pub") {
-    return "A Conor Byrne Pub club show — a strong Ballard fit for intimate folk, roots, songwriter, country, jazz, and local-band nights.";
+    return variantIndex % 2 === 0
+      ? "Good Ballard pub show."
+      : "Good Conor Byrne show if you want a small room.";
+  }
+
+  if (event.sourceName === "The Crocodile" || event.venue === "The Crocodile" || event.venue === "Madame Lou's") {
+    return "Good Belltown show.";
+  }
+
+  if (event.venue === "Here - After") {
+    return "Music-looking Here-After event. Check the details first.";
   }
 
   if (event.venue === "SeaMonster Lounge") {
-    return "A SeaMonster Lounge club set with Wallingford funk, soul, jazz, and improv energy — a strong option if you want a neighborhood room built around musicians.";
+    return variantIndex % 2 === 0
+      ? "A solid SeaMonster show."
+      : "Good SeaMonster show.";
   }
 
   if (event.sourceName === "Marymoor Park Concerts") {
-    return "A Marymoor Park outdoor concert — worth considering if you want a larger summer show on the Eastside.";
+    return "Good outdoor Eastside concert.";
   }
 
   if (event.sourceName === "Woodland Park Zoo / ZooTunes") {
-    return "A ZooTunes outdoor concert at Woodland Park Zoo — a good seasonal option if the artist already appeals to you.";
+    return "Good outdoor ZooTunes show.";
   }
 
   if (event.sourceName === "KEXP Events") {
-    return "A public KEXP music event — worth a look if you want an in-studio or community-minded Seattle music experience.";
+    return "Good KEXP music event.";
+  }
+
+  if (event.venue === "Climate Pledge Arena" || event.sourceName === "Climate Pledge Arena") {
+    return "Big arena show. Good if you already like the artist.";
   }
 
   if (event.sourceName === "STG Presents") {
     return event.classification.musicConfidence === "High"
-      ? "A bigger-room concert option. Worth a look if the artist already appeals to you."
-      : "A bigger-room concert option. Worth checking only if the artist already appeals to you.";
+      ? "Good if you already like the artist."
+      : "Bigger-room show. Check a clip first.";
   }
 
-  return `Looks like a plausible live-music option for ${timeframe}, but probably worth a quick spot-check before heading out.`;
+  return `Looks like a decent live-music option for ${timeframe}. Check a clip first.`;
+}
+
+function buildWhyLine(event: RankedEvent, timeframe = "tonight", context?: WhyLineContext): string {
+  const tags = inferEventTags(event);
+  const primaryTag = getPrimaryEventTag(tags);
+  const stemKey = primaryTag ? `tag:${primaryTag}` : `venue:${publicText(event.venue || event.sourceName).toLowerCase()}`;
+  const usedCount = context?.usedStems.get(stemKey) ?? 0;
+
+  if (context) {
+    context.usedStems.set(stemKey, usedCount + 1);
+  }
+
+  const lead = getEventLead(primaryTag, event);
+
+  if (lead) {
+    return lead;
+  }
+
+  return getVenueFallbackLine(event, timeframe, usedCount);
 }
 
 function buildSkipReason(event: RankedEvent): string {
@@ -393,8 +670,8 @@ function getMyTake(event: RankedEvent): string {
   return formatVerdict(event.verdict);
 }
 
-function renderHighlight(event: RankedEvent): string {
-  const why = buildWhyLine(event);
+function renderHighlight(event: RankedEvent, context?: WhyLineContext): string {
+  const why = buildWhyLine(event, "tonight", context);
   const timeNote = getTimeOfDayNote(event.time);
   const timeLine = timeNote ? `${event.time ?? "Unknown"} (${timeNote})` : (event.time ?? "Unknown");
   const availability = getAvailabilityLine(event);
@@ -419,8 +696,8 @@ function renderHighlight(event: RankedEvent): string {
   return lines.join("\n");
 }
 
-function renderHighlightHtml(event: RankedEvent): string {
-  const why = buildWhyLine(event);
+function renderHighlightHtml(event: RankedEvent, context?: WhyLineContext): string {
+  const why = buildWhyLine(event, "tonight", context);
   const timeNote = getTimeOfDayNote(event.time);
   const timeLine = timeNote ? `${event.time ?? "Unknown"} (${timeNote})` : (event.time ?? "Unknown");
   const availability = getAvailabilityLine(event);
@@ -703,7 +980,7 @@ function buildWeeklyGroupTake(group: WeeklyHighlightGroup): string {
   return getMyTake(group.representative);
 }
 
-function renderWeeklyHighlight(group: WeeklyHighlightGroup): string {
+function renderWeeklyHighlight(group: WeeklyHighlightGroup, context?: WhyLineContext): string {
   const representative = group.representative;
   const titleSource = group.events.length > 1 ? representative.title : representative.artist ?? representative.title;
   const title = cleanGroupedHighlightDisplayTitle(titleSource);
@@ -720,7 +997,7 @@ function renderWeeklyHighlight(group: WeeklyHighlightGroup): string {
     times ? `- ${dates.length === 1 ? "Time" : "Times"}: ${times}` : undefined,
     `- Location: ${location}`,
     availability ? `- Availability: ${availability}` : undefined,
-    `- Why it looks good: ${publicText(buildWhyLine(representative, "this week"))}`,
+    `- Why it looks good: ${publicText(buildWhyLine(representative, "this week", context))}`,
     `- My take: ${publicText(buildWeeklyGroupTake(group))}`,
     `- Source: ${formatSourceLinkMarkdown(representative)}`
   ]
@@ -728,7 +1005,7 @@ function renderWeeklyHighlight(group: WeeklyHighlightGroup): string {
     .join("\n");
 }
 
-function renderWeeklyHighlightHtml(group: WeeklyHighlightGroup): string {
+function renderWeeklyHighlightHtml(group: WeeklyHighlightGroup, context?: WhyLineContext): string {
   const representative = group.representative;
   const titleSource = group.events.length > 1 ? representative.title : representative.artist ?? representative.title;
   const title = cleanGroupedHighlightDisplayTitle(titleSource);
@@ -746,7 +1023,7 @@ function renderWeeklyHighlightHtml(group: WeeklyHighlightGroup): string {
     times ? `<li><strong>${dates.length === 1 ? "Time" : "Times"}:</strong> ${escapeHtml(times)}</li>` : undefined,
     `<li><strong>Location:</strong> ${escapeHtml(location)}</li>`,
     availability ? `<li><strong>Availability:</strong> ${escapeHtml(availability)}</li>` : undefined,
-    `<li><strong>Why it looks good:</strong> ${escapeHtml(publicText(buildWhyLine(representative, "this week")))}</li>`,
+    `<li><strong>Why it looks good:</strong> ${escapeHtml(publicText(buildWhyLine(representative, "this week", context)))}</li>`,
     `<li><strong>My take:</strong> ${escapeHtml(publicText(buildWeeklyGroupTake(group)))}</li>`,
     `<li><strong>Source:</strong> ${formatSourceLinkHtml(representative)}</li>`,
     "</ul>"
@@ -812,12 +1089,12 @@ export function selectWeeklyEmailSections(rankedEvents: RankedEvent[]): {
     const sourceKey = publicText(group.representative.sourceName);
     const venueOverCap = venueDiversityPossible && (venueCounts.get(venueKey) ?? 0) >= MAX_WEEKLY_HIGHLIGHTS_PER_VENUE;
     const sourceOverCap = sourceDiversityPossible && (sourceCounts.get(sourceKey) ?? 0) >= MAX_WEEKLY_HIGHLIGHTS_PER_SOURCE;
-    const seasonalOutdoorCount = highlights.filter((item) => isLargeOutdoorSeasonalSource(item.representative)).length;
-    const seasonalOutdoorOverCap = isLargeOutdoorSeasonalSource(group.representative)
-      && seasonalOutdoorCount >= MAX_WEEKLY_HIGHLIGHTS_SEASONAL_OUTDOOR
-      && sortedGroups.slice(index + 1).some((candidate) => !isLargeOutdoorSeasonalSource(candidate.representative));
+    const largeScaleCount = highlights.filter((item) => isLargeScaleConcertSource(item.representative)).length;
+    const largeScaleOverCap = isLargeScaleConcertSource(group.representative)
+      && largeScaleCount >= MAX_WEEKLY_HIGHLIGHTS_LARGE_SCALE
+      && sortedGroups.slice(index + 1).some((candidate) => !isLargeScaleConcertSource(candidate.representative));
 
-    if (!venueOverCap && !sourceOverCap && !seasonalOutdoorOverCap) {
+    if (!venueOverCap && !sourceOverCap && !largeScaleOverCap) {
       highlights.push(group);
       continue;
     }
@@ -837,7 +1114,7 @@ export function selectWeeklyEmailSections(rankedEvents: RankedEvent[]): {
     const groupScore = getWeeklyHighlightGroupScore(group);
     const isMultiNightRun = new Set(group.events.map((event) => event.date)).size > 1;
 
-    if (!seasonalOutdoorOverCap && isMultiNightRun && groupScore >= bestAlternativeScore + WEEKLY_DIVERSITY_OVERRIDE_GAP) {
+    if (!largeScaleOverCap && isMultiNightRun && groupScore >= bestAlternativeScore + WEEKLY_DIVERSITY_OVERRIDE_GAP) {
       highlights.push(group);
     }
   }
@@ -854,8 +1131,8 @@ export function selectWeeklyEmailSections(rankedEvents: RankedEvent[]): {
     const sourceCounts = countBy(alsoWorthALook, (item) => publicText(item.representative.sourceName));
     const combinedVenueCounts = countBy([...highlights, ...alsoWorthALook], (item) => publicText(item.representative.venue));
     const combinedSourceCounts = countBy([...highlights, ...alsoWorthALook], (item) => publicText(item.representative.sourceName));
-    const combinedSeasonalOutdoorCount = [...highlights, ...alsoWorthALook]
-      .filter((item) => isLargeOutdoorSeasonalSource(item.representative))
+    const combinedLargeScaleCount = [...highlights, ...alsoWorthALook]
+      .filter((item) => isLargeScaleConcertSource(item.representative))
       .length;
     const venueKey = publicText(group.representative.venue);
     const sourceKey = publicText(group.representative.sourceName);
@@ -866,8 +1143,8 @@ export function selectWeeklyEmailSections(rankedEvents: RankedEvent[]): {
       || (combinedVenueCounts.get(venueKey) ?? 0) >= MAX_WEEKLY_TOP_SECTIONS_PER_VENUE
       || (combinedSourceCounts.get(sourceKey) ?? 0) >= MAX_WEEKLY_TOP_SECTIONS_PER_SOURCE
       || (
-        isLargeOutdoorSeasonalSource(group.representative)
-        && combinedSeasonalOutdoorCount >= MAX_WEEKLY_TOP_SECTIONS_SEASONAL_OUTDOOR
+        isLargeScaleConcertSource(group.representative)
+        && combinedLargeScaleCount >= MAX_WEEKLY_TOP_SECTIONS_LARGE_SCALE
       )
     ) {
       continue;
@@ -964,6 +1241,8 @@ function getWeeklyEvaluatedReason(event: RankedEvent, isHighlighted: boolean, is
 
 export function generateEmailPreview(now: Date, rankedEvents: RankedEvent[]): string {
   const { highlights, alsoWorthChecking, remaining } = selectEmailSections(rankedEvents);
+  const highlightsWhyContext = createWhyLineContext();
+  const alsoWorthWhyContext = createWhyLineContext();
 
   const sections: string[] = [
     "Subject: Live Music Scout — Tonight around Seattle/Bellevue",
@@ -971,13 +1250,13 @@ export function generateEmailPreview(now: Date, rankedEvents: RankedEvent[]): st
     `Date: ${formatTonightLong(now)}`,
     "",
     "## Tonight’s Highlights",
-    highlights.length > 0 ? highlights.map(renderHighlight).join("\n\n") : "No strong highlights tonight."
+    highlights.length > 0 ? highlights.map((event) => renderHighlight(event, highlightsWhyContext)).join("\n\n") : "No strong highlights tonight."
   ];
 
   if (alsoWorthChecking.length > 0) {
     sections.push("");
     sections.push("## Also Worth Checking");
-    sections.push(alsoWorthChecking.map(renderHighlight).join("\n\n"));
+    sections.push(alsoWorthChecking.map((event) => renderHighlight(event, alsoWorthWhyContext)).join("\n\n"));
   }
 
   sections.push("");
@@ -995,6 +1274,8 @@ export function generateEmailPreview(now: Date, rankedEvents: RankedEvent[]): st
 
 export function generateEmailHtml(now: Date, rankedEvents: RankedEvent[]): string {
   const { highlights, alsoWorthChecking, remaining } = selectEmailSections(rankedEvents);
+  const highlightsWhyContext = createWhyLineContext();
+  const alsoWorthWhyContext = createWhyLineContext();
 
   return [
     "<!doctype html>",
@@ -1002,9 +1283,9 @@ export function generateEmailHtml(now: Date, rankedEvents: RankedEvent[]): strin
     `<p><strong>Subject:</strong> Live Music Scout — Tonight around Seattle/Bellevue</p>`,
     `<p><strong>Date:</strong> ${escapeHtml(formatTonightLong(now))}</p>`,
     "<h2>Tonight’s Highlights</h2>",
-    highlights.length > 0 ? highlights.map(renderHighlightHtml).join("") : "<p>No strong highlights tonight.</p>",
+    highlights.length > 0 ? highlights.map((event) => renderHighlightHtml(event, highlightsWhyContext)).join("") : "<p>No strong highlights tonight.</p>",
     alsoWorthChecking.length > 0
-      ? `<h2>Also Worth Checking</h2>${alsoWorthChecking.map(renderHighlightHtml).join("")}`
+      ? `<h2>Also Worth Checking</h2>${alsoWorthChecking.map((event) => renderHighlightHtml(event, alsoWorthWhyContext)).join("")}`
       : "",
     "<h2>All Evaluated Shows</h2>",
     remaining.length > 0
@@ -1022,19 +1303,21 @@ export function generateWeeklyEmailPreview(
   endKey: string
 ): string {
   const { highlights, alsoWorthALook, evaluatedByDay, highlightIds, alsoWorthALookIds } = selectWeeklyEmailSections(rankedEvents);
+  const highlightsWhyContext = createWhyLineContext();
+  const alsoWorthWhyContext = createWhyLineContext();
   const sections: string[] = [
     "Subject: Live Music Scout — This Week around Seattle/Bellevue",
     "",
     `Date range: ${formatDateRangeLong(startKey, endKey)}`,
     "",
     "## This Week’s Highlights",
-    highlights.length > 0 ? highlights.map(renderWeeklyHighlight).join("\n\n") : "No strong highlights this week."
+    highlights.length > 0 ? highlights.map((group) => renderWeeklyHighlight(group, highlightsWhyContext)).join("\n\n") : "No strong highlights this week."
   ];
 
   if (alsoWorthALook.length > 0) {
     sections.push("");
     sections.push("## Also Worth a Look");
-    sections.push(alsoWorthALook.map(renderWeeklyHighlight).join("\n\n"));
+    sections.push(alsoWorthALook.map((group) => renderWeeklyHighlight(group, alsoWorthWhyContext)).join("\n\n"));
   }
 
   sections.push("");
@@ -1063,6 +1346,8 @@ export function generateWeeklyEmailHtml(
   endKey: string
 ): string {
   const { highlights, alsoWorthALook, evaluatedByDay, highlightIds, alsoWorthALookIds } = selectWeeklyEmailSections(rankedEvents);
+  const highlightsWhyContext = createWhyLineContext();
+  const alsoWorthWhyContext = createWhyLineContext();
 
   return [
     "<!doctype html>",
@@ -1070,9 +1355,9 @@ export function generateWeeklyEmailHtml(
     "<p><strong>Subject:</strong> Live Music Scout — This Week around Seattle/Bellevue</p>",
     `<p><strong>Date range:</strong> ${escapeHtml(formatDateRangeLong(startKey, endKey))}</p>`,
     "<h2>This Week’s Highlights</h2>",
-    highlights.length > 0 ? highlights.map(renderWeeklyHighlightHtml).join("") : "<p>No strong highlights this week.</p>",
+    highlights.length > 0 ? highlights.map((group) => renderWeeklyHighlightHtml(group, highlightsWhyContext)).join("") : "<p>No strong highlights this week.</p>",
     alsoWorthALook.length > 0
-      ? `<h2>Also Worth a Look</h2>${alsoWorthALook.map(renderWeeklyHighlightHtml).join("")}`
+      ? `<h2>Also Worth a Look</h2>${alsoWorthALook.map((group) => renderWeeklyHighlightHtml(group, alsoWorthWhyContext)).join("")}`
       : "",
     "<h2>Evaluated Shows by Day</h2>",
     evaluatedByDay.size === 0
