@@ -67,14 +67,18 @@ npm run scout:week:email
 
 ## Current parser coverage
 
-- `Tractor Tavern`: implemented
-- `The Royal Room`: implemented
-- `STG Presents`: implemented first-pass parser
-- `Sunset Tavern`: fetch validated, parser still TODO
-- `Dimitriou's Jazz Alley`: TODO
-- `Nectar Lounge`: TODO
-- `SeaMonster Lounge`: TODO
-- `Easy Street Records`: TODO
+The canonical source inventory lives in `data/sources.json`. Each entry records
+whether the source is live or tracked as a parser TODO.
+
+Notable tracked TODO sources include:
+
+- `Tim's Tavern`: tracked, but blocked by Cloudflare in the first-pass fetch path.
+- `Easy Street Records`: tracked, but needs a better official source or manual-events fallback.
+- `Remlinger Farms Summer Concerts` and `The Gorge Amphitheatre Summer Concerts`: tracked seasonal TODO sources.
+
+`The Crocodile` is live via its public TicketWeb organization calendar, with
+explicit venue filtering for The Crocodile, Madame Lou's, and music-specific
+Here-After listings.
 
 The implemented parser is intentionally conservative. If the date cannot be determined confidently, the event is not promoted to a top recommendation.
 

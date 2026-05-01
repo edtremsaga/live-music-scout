@@ -163,6 +163,28 @@ test("Neumos, Barboza, Chop Suey, and Conor Byrne club listings classify as musi
   assert.equal(conorByrne.classification.musicConfidence, "High");
 });
 
+test("The Crocodile complex listings classify as music when parsed from included rooms", () => {
+  const crocodile = classifyEvent(makeEvent({
+    title: "Moonchild, Brittney Carter",
+    venue: "The Crocodile",
+    sourceName: "The Crocodile",
+    genreHints: ["live music", "Belltown club", "supporting artists"],
+    url: "https://www.ticketweb.com/event/moonchild-the-crocodile-tickets/1"
+  }));
+  const madameLous = classifyEvent(makeEvent({
+    title: "Ground Zero Blues Club",
+    venue: "Madame Lou's",
+    sourceName: "The Crocodile",
+    genreHints: ["live music", "Belltown club", "blues"],
+    url: "https://www.ticketweb.com/event/ground-zero-madame-lous-tickets/2"
+  }));
+
+  assert.equal(crocodile.classification.isLikelyMusic, true);
+  assert.equal(crocodile.classification.eventType, "music");
+  assert.equal(madameLous.classification.isLikelyMusic, true);
+  assert.equal(madameLous.classification.eventType, "music");
+});
+
 test("Kerry Hall yoga/class style STG listing stays out of likely music", () => {
   const event = makeEvent({
     title: "Yoga en Español con Karla Mora Repeating Event",
@@ -200,6 +222,21 @@ test("KEXP public in-person event rows classify as music", () => {
 
   assert.equal(classified.classification.isLikelyMusic, true);
   assert.equal(classified.classification.eventType, "music");
+});
+
+test("Climate Pledge Ticketmaster MusicEvent rows classify as music", () => {
+  const classified = classifyEvent(makeEvent({
+    title: "Florence + The Machine",
+    venue: "Climate Pledge Arena",
+    sourceName: "Climate Pledge Arena",
+    genreHints: ["large arena concert", "Ticketmaster MusicEvent", "touring act"],
+    url: "https://www.ticketmaster.com/florence-the-machine-seattle-washington-05-12-2026/event/0F0062E2"
+  }));
+
+  assert.equal(classified.classification.isLikelyMusic, true);
+  assert.equal(classified.classification.eventType, "music");
+  assert.equal(classified.classification.musicConfidence, "High");
+  assert.match(classified.classification.fitReason, /strong music signals/);
 });
 
 test("Royal Room specific music-looking titles classify as likely music", () => {

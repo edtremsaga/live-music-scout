@@ -63,14 +63,20 @@ function addVenueAwareScoring(blob: string, matchReasons: string[]): number {
     matchReasons.push("Conor Byrne often surfaces intimate Ballard folk, roots, songwriter, country, and local-band shows");
   }
 
+  if (blob.includes("the crocodile") || blob.includes("madame lou")) {
+    score += 2;
+    matchReasons.push("The Crocodile complex often surfaces Belltown touring, indie, rock, and club shows");
+  }
+
   if (
     blob.includes("the paramount theatre")
     || blob.includes("the moore theatre")
     || blob.includes("the neptune theatre")
     || blob.includes("stg presents")
+    || blob.includes("climate pledge arena")
   ) {
     score += 1;
-    matchReasons.push("STG can surface notable touring acts, even if the room is bigger than your ideal");
+    matchReasons.push("larger rooms can surface notable touring acts, even if they are bigger than your ideal");
   }
 
   return score;

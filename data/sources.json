@@ -65,6 +65,17 @@
     "notes": "Live parser uses the public VenuePilot event widget embedded on Conor Byrne Pub's official events page"
   },
   {
+    "name": "The Crocodile",
+    "url": "https://www.ticketweb.com/events/org/243963",
+    "parser": "crocodile",
+    "location": "Seattle, WA",
+    "areaTags": ["Seattle", "Belltown"],
+    "sourceType": "venue",
+    "musicOnly": true,
+    "parserStatus": "live",
+    "notes": "Live parser reads The Crocodile public TicketWeb organization calendar and includes The Crocodile and Madame Lou's, includes Here-After only with explicit music signals, and excludes Hotel Crocodile, Baba Yaga, already-tracked outside venues, cancelled listings, and unrelated partner venues"
+  },
+  {
     "name": "The Royal Room",
     "url": "https://theroyalroomseattle.com/events/",
     "parser": "royalRoom",
@@ -224,14 +235,14 @@
   },
   {
     "name": "Climate Pledge Arena",
-    "url": "https://climatepledgearena.com/",
-    "parser": "configuredTodo",
+    "url": "https://www.ticketmaster.com/climate-pledge-arena-tickets-seattle/venue/123894",
+    "parser": "climatePledge",
     "location": "Seattle, WA",
     "areaTags": ["Seattle", "Lower Queen Anne"],
     "sourceType": "large_venue",
     "musicOnly": true,
-    "parserStatus": "todo",
-    "notes": "parser TODO: Climate Pledge Arena is configured as a music-only large venue source; sports and non-music arena events should be excluded if a parser is added"
+    "parserStatus": "live",
+    "notes": "Live parser reads Ticketmaster public JSON-LD from Climate Pledge Arena's official ticketing venue page and accepts only schema.org MusicEvent entries"
   },
   {
     "name": "Nectar Lounge",

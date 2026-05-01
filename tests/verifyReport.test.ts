@@ -207,6 +207,8 @@ test("verification email uses readable email-style text sections", () => {
   assert.match(report.text, /- Tracked venue sources not feeding emails: 2/);
   assert.match(report.text, /- Live seasonal sources outside report window: 1/);
   assert.match(report.text, /- Seasonal\/future parser sources: 1/);
+  assert.match(report.text, /- Live large venue sources outside report window: 0/);
+  assert.match(report.text, /- Large venue gaps: 1/);
   assert.match(report.text, /- Tier note: Top curated section\./);
   assert.match(report.text, /- Source health: The Royal Room fetched, High confidence/);
   assert.match(report.text, /- Recommendation: Go/);
@@ -245,4 +247,41 @@ test("verification email reports tracked sources that are not feeding emails", (
   assert.match(report.text, /STG Presents — fetched — feeds covered venues: The Paramount Theatre, The Neptune Theatre/);
   assert.match(report.html, /<h3>Tracked but not feeding emails<\/h3>/);
   assert.match(report.html, /<strong>Slim&#39;s Last Chance:<\/strong> Not feeding emails/);
+});
+
+test("verification email reports live large venue sources outside the report window", () => {
+  const base = makeScoutRunResult();
+  const result = makeScoutRunResult({
+    sources: base.sources?.map((source) =>
+      source.name === "Climate Pledge Arena"
+        ? {
+          ...source,
+          url: "https://www.ticketmaster.com/climate-pledge-arena-tickets-seattle/venue/123894",
+          parser: "climatePledge",
+          parserStatus: "live",
+          notes: "Live parser reads Ticketmaster public JSON-LD from Climate Pledge Arena's official ticketing venue page and accepts only schema.org MusicEvent entries"
+        }
+        : source
+    ),
+    statuses: base.statuses.map((status) =>
+      status.sourceName === "Climate Pledge Arena"
+        ? {
+          ...status,
+          parserName: "climatePledge",
+          fetchStatus: "fetched",
+          message: "parsed Climate Pledge Arena music events from Ticketmaster public JSON-LD",
+          candidateCount: 6,
+          matchedCount: 0,
+          parserConfidence: "High"
+        }
+        : status
+    )
+  });
+
+  const report = generatePreSendVerificationEmail(result);
+
+  assert.match(report.text, /- Live large venue sources outside report window: 1/);
+  assert.match(report.text, /### Live large venue sources outside report window/);
+  assert.match(report.text, /Climate Pledge Arena — Live large venue source outside report window — fetched, 6 parsed, 0 tonight; Live parser reads Ticketmaster public JSON-LD/);
+  assert.doesNotMatch(report.text, /Climate Pledge Arena — Large venue TODO/);
 });

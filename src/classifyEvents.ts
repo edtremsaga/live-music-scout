@@ -247,9 +247,24 @@ export function classifyEvent(event: LiveMusicEvent): ClassifiedEvent {
     reasons.push("STG can include music, but it needs stronger title signals");
   }
 
+  if (event.sourceName === "Climate Pledge Arena" || event.venue === "Climate Pledge Arena") {
+    musicScore += 2;
+    reasons.push("Climate Pledge parser is restricted to Ticketmaster MusicEvent entries");
+  }
+
   if (event.sourceName === "KEXP Events") {
     musicScore += 3;
     reasons.push("KEXP public event rows are music-oriented when marked in-person");
+  }
+
+  if (event.sourceName === "The Crocodile" || event.venue === "The Crocodile" || event.venue === "Madame Lou's") {
+    musicScore += 3;
+    reasons.push("The Crocodile parser is restricted to music-oriented Crocodile complex listings");
+  }
+
+  if (event.venue === "Here - After") {
+    musicScore += 1;
+    reasons.push("Here-After is included only when the listing has explicit music signals");
   }
 
   if (event.venue === "Nectar Lounge" || event.sourceName === "Nectar Lounge") {

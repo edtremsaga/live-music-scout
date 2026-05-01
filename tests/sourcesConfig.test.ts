@@ -32,6 +32,7 @@ test("configured allowlist includes the new venue and seasonal sources", () => {
   assert.equal(names.has("Barboza"), true);
   assert.equal(names.has("Chop Suey"), true);
   assert.equal(names.has("Conor Byrne Pub"), true);
+  assert.equal(names.has("The Crocodile"), true);
 });
 
 test("The Triple Door is configured as a live parsed venue source", () => {
@@ -115,6 +116,22 @@ test("Conor Byrne Pub is configured as a live parsed Ballard venue source", () =
   assert.equal(conorByrne.musicOnly, true);
   assert.equal(conorByrne.areaTags?.includes("Ballard"), true);
   assert.match(conorByrne.notes ?? "", /public VenuePilot event widget/i);
+});
+
+test("The Crocodile is configured as a live parsed Belltown venue source", () => {
+  const sources = loadSources();
+  const crocodile = sources.find((source) => source.name === "The Crocodile");
+
+  assert.ok(crocodile);
+  assert.equal(crocodile.url, "https://www.ticketweb.com/events/org/243963");
+  assert.equal(crocodile.parser, "crocodile");
+  assert.equal(crocodile.parserStatus, "live");
+  assert.equal(crocodile.sourceType, "venue");
+  assert.equal(crocodile.musicOnly, true);
+  assert.equal(crocodile.areaTags?.includes("Belltown"), true);
+  assert.match(crocodile.notes ?? "", /TicketWeb organization calendar/i);
+  assert.match(crocodile.notes ?? "", /Madame Lou's/i);
+  assert.match(crocodile.notes ?? "", /Here-After only with explicit music signals/i);
 });
 
 test("Nectar Lounge, Hidden Hall, and Skylark Cafe are configured as live parsed venue sources", () => {
@@ -222,7 +239,6 @@ test("KEXP Events is configured as a live public event source", () => {
 test("remaining outdoor summer concert TODO source is consistently marked", () => {
   const sources = loadSources();
   const remlinger = sources.find((source) => source.name === "Remlinger Farms Summer Concerts");
-  const climatePledge = sources.find((source) => source.name === "Climate Pledge Arena");
 
   assert.ok(remlinger);
   assert.equal(remlinger.sourceType, "seasonal_outdoor");
@@ -230,11 +246,20 @@ test("remaining outdoor summer concert TODO source is consistently marked", () =
   assert.equal(remlinger.musicOnly, true);
   assert.equal(remlinger.duplicateGroup, "remlinger-farms");
   assert.equal(remlinger.parserStatus, "todo");
+});
+
+test("Climate Pledge Arena is configured as a live large-venue music source", () => {
+  const sources = loadSources();
+  const climatePledge = sources.find((source) => source.name === "Climate Pledge Arena");
 
   assert.ok(climatePledge);
+  assert.equal(climatePledge.url, "https://www.ticketmaster.com/climate-pledge-arena-tickets-seattle/venue/123894");
+  assert.equal(climatePledge.parser, "climatePledge");
   assert.equal(climatePledge.sourceType, "large_venue");
   assert.equal(climatePledge.musicOnly, true);
-  assert.equal(climatePledge.parserStatus, "todo");
+  assert.equal(climatePledge.parserStatus, "live");
+  assert.match(climatePledge.notes ?? "", /Ticketmaster public JSON-LD/i);
+  assert.match(climatePledge.notes ?? "", /MusicEvent/i);
 });
 
 test("Chateau Ste. Michelle Summer Concerts is configured as a live seasonal outdoor source", () => {

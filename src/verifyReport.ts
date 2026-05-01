@@ -260,7 +260,9 @@ function formatCoverageStatus(source: SourceConfig, status: SourceRunStatus | un
   }
 
   if (source.sourceType === "large_venue") {
-    return "Large venue TODO";
+    return source.parserStatus === "live" && source.parser !== "configuredTodo"
+      ? "Live large venue source outside report window"
+      : "Large venue TODO";
   }
 
   if (source.parserStatus === "todo" || source.parser === "configuredTodo") {
@@ -329,7 +331,22 @@ function buildCoverageGapSections(result: ScoutRunResult): CoverageGapSection[] 
     })
     .map((source) => makeCoverageGap(source, getSourceStatus(result.statuses, source.name)));
   const largeVenue = sources
-    .filter((source) => source.sourceType === "large_venue")
+    .filter(
+      (source) =>
+        source.sourceType === "large_venue"
+        && (source.parserStatus === "todo" || source.parser === "configuredTodo")
+    )
+    .map((source) => makeCoverageGap(source, getSourceStatus(result.statuses, source.name)));
+  const liveLargeVenueOutsideWindow = sources
+    .filter((source) => {
+      const status = getSourceStatus(result.statuses, source.name);
+      return source.sourceType === "large_venue"
+        && source.parserStatus === "live"
+        && source.parser !== "configuredTodo"
+        && status?.fetchStatus === "fetched"
+        && status.candidateCount > 0
+        && status.matchedCount === 0;
+    })
     .map((source) => makeCoverageGap(source, getSourceStatus(result.statuses, source.name)));
   const promoterCaveats = sources
     .filter((source) => source.sourceType === "promoter" && source.coveredVenues && source.coveredVenues.length > 0)
@@ -343,6 +360,7 @@ function buildCoverageGapSections(result: ScoutRunResult): CoverageGapSection[] 
     { title: "Tracked but not feeding emails", gaps: trackedButNotFeeding },
     { title: "Live seasonal sources outside report window", gaps: liveSeasonalOutsideWindow },
     { title: "Seasonal / future parser sources", gaps: seasonalOutdoor },
+    { title: "Live large venue sources outside report window", gaps: liveLargeVenueOutsideWindow },
     { title: "Large venue gaps", gaps: largeVenue },
     { title: "Promoter coverage caveats", gaps: promoterCaveats }
   ].filter((section) => section.gaps.length > 0);
@@ -358,6 +376,7 @@ function formatCoverageSummary(result: ScoutRunResult, coverageGapSections: Cove
     `Tracked venue sources not feeding emails: ${getGapCount("Tracked but not feeding emails")}`,
     `Live seasonal sources outside report window: ${getGapCount("Live seasonal sources outside report window")}`,
     `Seasonal/future parser sources: ${getGapCount("Seasonal / future parser sources")}`,
+    `Live large venue sources outside report window: ${getGapCount("Live large venue sources outside report window")}`,
     `Large venue gaps: ${getGapCount("Large venue gaps")}`
   ];
 }
