@@ -968,7 +968,7 @@ test("weekly html renders small highlight thumbnails for valid https images only
     "2026-05-08"
   );
 
-  assert.match(html, /<img src="https:\/\/www\.seamonsterlounge\.com\/images\/weekly\.jpg" width="112" alt="Weekly Image Pick poster"/);
+  assert.match(html, /<img src="https:\/\/www\.seamonsterlounge\.com\/images\/weekly\.jpg" width="112" alt="" role="presentation"/);
   assert.doesNotMatch(html, /http:\/\/example\.com\/not-rendered\.jpg/);
   assert.doesNotMatch(preview, /weekly\.jpg/);
 });

@@ -1047,12 +1047,11 @@ function renderWeeklyHighlightHtml(group: WeeklyHighlightGroup, context?: WhyLin
     return content;
   }
 
-  const imageAlt = publicText(representative.imageAlt ?? `${title} event image`);
   return [
     '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin:0 0 16px 0;">',
     "<tr>",
     '<td style="width:116px; padding:4px 16px 8px 0; vertical-align:top;">',
-    `<img src="${escapeHtml(imageUrl)}" width="112" alt="${escapeHtml(imageAlt)}" style="display:block; width:112px; max-width:112px; height:auto; border-radius:4px;">`,
+    `<img src="${escapeHtml(imageUrl)}" width="112" alt="" role="presentation" style="display:block; width:112px; max-width:112px; height:auto; border-radius:4px;">`,
     "</td>",
     '<td style="vertical-align:top;">',
     content,
@@ -1422,7 +1421,7 @@ export function generateWeeklyEmailHtml(
     "<h2>This Week’s Highlights</h2>",
     highlights.length > 0 ? highlights.map((group) => renderWeeklyHighlightHtml(group, highlightsWhyContext, true)).join("") : "<p>No strong highlights this week.</p>",
     alsoWorthALook.length > 0
-      ? `<h2>Also Worth a Look</h2>${alsoWorthALook.map((group) => renderWeeklyHighlightHtml(group, alsoWorthWhyContext)).join("")}`
+      ? `<h2>Also Worth a Look</h2>${alsoWorthALook.map((group) => renderWeeklyHighlightHtml(group, alsoWorthWhyContext, true)).join("")}`
       : "",
     includeEvaluatedShows ? renderWeeklyEvaluatedSectionsHtml(evaluatedByDay, highlightIds, alsoWorthALookIds) : "",
     "<p><em>Evaluated from the configured venue sources; not a complete citywide calendar.</em></p>",
