@@ -8,8 +8,10 @@
     "scout:verify": "node --import tsx src/scoutVerify.ts",
     "scout:email": "node --import tsx src/scoutEmail.ts",
     "scout:week": "node --import tsx src/scoutWeek.ts",
+    "scout:week:full": "node --import tsx src/scoutWeek.ts --full",
     "scout:week:verify": "node --import tsx src/scoutWeekVerify.ts",
     "scout:week:email": "node --import tsx src/scoutWeekEmail.ts",
+    "scout:week:email:full": "node --import tsx src/scoutWeekEmail.ts --full",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/**/*.test.ts"
   },

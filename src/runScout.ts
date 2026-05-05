@@ -25,6 +25,7 @@ export type ScoutRunResult = {
 
 type RunScoutOptions = {
   reportKind?: ReportKind;
+  includeEvaluatedShows?: boolean;
   updateSeen?: boolean;
 };
 
@@ -32,6 +33,7 @@ export async function runScout(options: RunScoutOptions = {}): Promise<ScoutRunR
   const now = new Date();
   const timezone = getPacificTimezone();
   const reportKind = options.reportKind ?? "tonight";
+  const includeEvaluatedShows = options.includeEvaluatedShows ?? reportKind !== "week";
   const updateSeen = options.updateSeen ?? true;
   const startKey = getDateKeyWithOffset(now, 0, timezone);
   const endKey = getDateKeyWithOffset(now, reportKind === "week" ? 7 : 0, timezone);
@@ -115,11 +117,11 @@ export async function runScout(options: RunScoutOptions = {}): Promise<ScoutRunR
   const rankedEvents = rankEvents(classifiedTonightEvents, preferences, seenEventIds);
   const preview =
     reportKind === "week"
-      ? generateWeeklyEmailPreview(now, rankedEvents, startKey, endKey)
+      ? generateWeeklyEmailPreview(now, rankedEvents, startKey, endKey, { includeEvaluatedShows })
       : generateEmailPreview(now, rankedEvents);
   const html =
     reportKind === "week"
-      ? generateWeeklyEmailHtml(now, rankedEvents, startKey, endKey)
+      ? generateWeeklyEmailHtml(now, rankedEvents, startKey, endKey, { includeEvaluatedShows })
       : generateEmailHtml(now, rankedEvents);
   const finalEmailItemCount = rankedEvents.length;
 

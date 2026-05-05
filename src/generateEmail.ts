@@ -8,6 +8,10 @@ export type WeeklyHighlightGroup = {
   events: RankedEvent[];
 };
 
+type WeeklyEmailOptions = {
+  includeEvaluatedShows?: boolean;
+};
+
 const MAX_WEEKLY_HIGHLIGHTS = 6;
 const MAX_WEEKLY_ALSO_WORTH = 6;
 const MAX_DAILY_HIGHLIGHTS_PER_VENUE = 2;
@@ -1005,7 +1009,15 @@ function renderWeeklyHighlight(group: WeeklyHighlightGroup, context?: WhyLineCon
     .join("\n");
 }
 
-function renderWeeklyHighlightHtml(group: WeeklyHighlightGroup, context?: WhyLineContext): string {
+function getEmailImageUrl(event: RankedEvent): string | undefined {
+  if (!event.imageUrl?.startsWith("https://")) {
+    return undefined;
+  }
+
+  return event.imageUrl;
+}
+
+function renderWeeklyHighlightHtml(group: WeeklyHighlightGroup, context?: WhyLineContext, includeImage = false): string {
   const representative = group.representative;
   const titleSource = group.events.length > 1 ? representative.title : representative.artist ?? representative.title;
   const title = cleanGroupedHighlightDisplayTitle(titleSource);
@@ -1014,8 +1026,8 @@ function renderWeeklyHighlightHtml(group: WeeklyHighlightGroup, context?: WhyLin
   const dates = Array.from(new Set(group.events.map((event) => event.date))).sort();
   const times = formatWeeklyTimes(group.events);
   const availability = group.events.every((event) => getAvailabilityLine(event) === "Sold out") ? "Sold out" : undefined;
-
-  return [
+  const imageUrl = includeImage ? getEmailImageUrl(representative) : undefined;
+  const content = [
     `<h3>${escapeHtml(title)}</h3>`,
     "<ul>",
     `<li><strong>Venue:</strong> ${escapeHtml(venue)}</li>`,
@@ -1030,6 +1042,24 @@ function renderWeeklyHighlightHtml(group: WeeklyHighlightGroup, context?: WhyLin
   ]
     .filter(Boolean)
     .join("");
+
+  if (!imageUrl) {
+    return content;
+  }
+
+  const imageAlt = publicText(representative.imageAlt ?? `${title} event image`);
+  return [
+    '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse; margin:0 0 16px 0;">',
+    "<tr>",
+    '<td style="width:116px; padding:4px 16px 8px 0; vertical-align:top;">',
+    `<img src="${escapeHtml(imageUrl)}" width="112" alt="${escapeHtml(imageAlt)}" style="display:block; width:112px; max-width:112px; height:auto; border-radius:4px;">`,
+    "</td>",
+    '<td style="vertical-align:top;">',
+    content,
+    "</td>",
+    "</tr>",
+    "</table>"
+  ].join("");
 }
 
 export function selectWeeklyEmailSections(rankedEvents: RankedEvent[]): {
@@ -1193,6 +1223,46 @@ function renderWeeklyEvaluatedItemHtml(event: RankedEvent, isHighlighted: boolea
   return `<li>${escapeHtml(title)} — ${escapeHtml(venue)}${escapeHtml(timePart)} — ${escapeHtml(publicText(reason))} ${formatSourceLinkHtml(event)}</li>`;
 }
 
+function renderWeeklyEvaluatedSections(
+  evaluatedByDay: Map<string, RankedEvent[]>,
+  highlightIds: Set<string>,
+  alsoWorthALookIds: Set<string>
+): string[] {
+  const sections = ["", "## Evaluated Shows by Day"];
+
+  if (evaluatedByDay.size === 0) {
+    sections.push("No other evaluated shows in this window.");
+    return sections;
+  }
+
+  for (const [dateKey, events] of Array.from(evaluatedByDay.entries()).sort(([a], [b]) => a.localeCompare(b))) {
+    sections.push("");
+    sections.push(`### ${formatDateKeyWeekday(dateKey)}`);
+    sections.push(events.map((event) => renderWeeklyEvaluatedItem(event, highlightIds.has(event.id), alsoWorthALookIds.has(event.id))).join("\n"));
+  }
+
+  return sections;
+}
+
+function renderWeeklyEvaluatedSectionsHtml(
+  evaluatedByDay: Map<string, RankedEvent[]>,
+  highlightIds: Set<string>,
+  alsoWorthALookIds: Set<string>
+): string {
+  return [
+    "<h2>Evaluated Shows by Day</h2>",
+    evaluatedByDay.size === 0
+      ? "<p>No other evaluated shows in this window.</p>"
+      : Array.from(evaluatedByDay.entries())
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(
+            ([dateKey, events]) =>
+              `<h3>${escapeHtml(formatDateKeyWeekday(dateKey))}</h3><ul>${events.map((event) => renderWeeklyEvaluatedItemHtml(event, highlightIds.has(event.id), alsoWorthALookIds.has(event.id))).join("")}</ul>`
+          )
+          .join("")
+  ].join("");
+}
+
 function getWeeklyEvaluatedReason(event: RankedEvent, isHighlighted: boolean, isAlsoWorthALook = false): string {
   if (isHighlighted) {
     return "Highlighted above.";
@@ -1300,9 +1370,11 @@ export function generateWeeklyEmailPreview(
   now: Date,
   rankedEvents: RankedEvent[],
   startKey: string,
-  endKey: string
+  endKey: string,
+  options: WeeklyEmailOptions = {}
 ): string {
   const { highlights, alsoWorthALook, evaluatedByDay, highlightIds, alsoWorthALookIds } = selectWeeklyEmailSections(rankedEvents);
+  const includeEvaluatedShows = options.includeEvaluatedShows ?? true;
   const highlightsWhyContext = createWhyLineContext();
   const alsoWorthWhyContext = createWhyLineContext();
   const sections: string[] = [
@@ -1320,17 +1392,8 @@ export function generateWeeklyEmailPreview(
     sections.push(alsoWorthALook.map((group) => renderWeeklyHighlight(group, alsoWorthWhyContext)).join("\n\n"));
   }
 
-  sections.push("");
-  sections.push("## Evaluated Shows by Day");
-
-  if (evaluatedByDay.size === 0) {
-    sections.push("No other evaluated shows in this window.");
-  } else {
-    for (const [dateKey, events] of Array.from(evaluatedByDay.entries()).sort(([a], [b]) => a.localeCompare(b))) {
-      sections.push("");
-      sections.push(`### ${formatDateKeyWeekday(dateKey)}`);
-      sections.push(events.map((event) => renderWeeklyEvaluatedItem(event, highlightIds.has(event.id), alsoWorthALookIds.has(event.id))).join("\n"));
-    }
+  if (includeEvaluatedShows) {
+    sections.push(...renderWeeklyEvaluatedSections(evaluatedByDay, highlightIds, alsoWorthALookIds));
   }
 
   sections.push("");
@@ -1343,9 +1406,11 @@ export function generateWeeklyEmailHtml(
   now: Date,
   rankedEvents: RankedEvent[],
   startKey: string,
-  endKey: string
+  endKey: string,
+  options: WeeklyEmailOptions = {}
 ): string {
   const { highlights, alsoWorthALook, evaluatedByDay, highlightIds, alsoWorthALookIds } = selectWeeklyEmailSections(rankedEvents);
+  const includeEvaluatedShows = options.includeEvaluatedShows ?? true;
   const highlightsWhyContext = createWhyLineContext();
   const alsoWorthWhyContext = createWhyLineContext();
 
@@ -1355,20 +1420,11 @@ export function generateWeeklyEmailHtml(
     "<p><strong>Subject:</strong> Live Music Scout — This Week around Seattle/Bellevue</p>",
     `<p><strong>Date range:</strong> ${escapeHtml(formatDateRangeLong(startKey, endKey))}</p>`,
     "<h2>This Week’s Highlights</h2>",
-    highlights.length > 0 ? highlights.map((group) => renderWeeklyHighlightHtml(group, highlightsWhyContext)).join("") : "<p>No strong highlights this week.</p>",
+    highlights.length > 0 ? highlights.map((group) => renderWeeklyHighlightHtml(group, highlightsWhyContext, true)).join("") : "<p>No strong highlights this week.</p>",
     alsoWorthALook.length > 0
       ? `<h2>Also Worth a Look</h2>${alsoWorthALook.map((group) => renderWeeklyHighlightHtml(group, alsoWorthWhyContext)).join("")}`
       : "",
-    "<h2>Evaluated Shows by Day</h2>",
-    evaluatedByDay.size === 0
-      ? "<p>No other evaluated shows in this window.</p>"
-      : Array.from(evaluatedByDay.entries())
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(
-            ([dateKey, events]) =>
-              `<h3>${escapeHtml(formatDateKeyWeekday(dateKey))}</h3><ul>${events.map((event) => renderWeeklyEvaluatedItemHtml(event, highlightIds.has(event.id), alsoWorthALookIds.has(event.id))).join("")}</ul>`
-          )
-          .join(""),
+    includeEvaluatedShows ? renderWeeklyEvaluatedSectionsHtml(evaluatedByDay, highlightIds, alsoWorthALookIds) : "",
     "<p><em>Evaluated from the configured venue sources; not a complete citywide calendar.</em></p>",
     "</body></html>"
   ].join("");

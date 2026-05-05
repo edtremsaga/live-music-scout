@@ -766,6 +766,33 @@ test("weekly preview groups evaluated shows by day", () => {
   assert.match(output, /Tuesday Event — Test Venue/);
 });
 
+test("weekly report can omit evaluated shows by day", () => {
+  const event = makeRankedEvent({
+    title: "Summary Event",
+    artist: "Summary Event",
+    date: "2026-04-28",
+    verdict: "Go"
+  });
+
+  const preview = generateWeeklyEmailPreview(
+    new Date("2026-04-25T19:00:00-07:00"),
+    [event],
+    "2026-04-25",
+    "2026-05-02",
+    { includeEvaluatedShows: false }
+  );
+  const html = generateWeeklyEmailHtml(
+    new Date("2026-04-25T19:00:00-07:00"),
+    [event],
+    "2026-04-25",
+    "2026-05-02",
+    { includeEvaluatedShows: false }
+  );
+
+  assert.doesNotMatch(preview, /## Evaluated Shows by Day/);
+  assert.doesNotMatch(html, /<h2>Evaluated Shows by Day<\/h2>/);
+});
+
 test("weekly preview dedupes repeated multi-night highlights but keeps dated events by day", () => {
   const runNightOne = makeRankedEvent({
     id: "vincent-night-one",
@@ -903,6 +930,47 @@ test("weekly html includes Also Worth a Look when secondary picks exist", () => 
 
   assert.match(html, /<h2>Also Worth a Look<\/h2>/);
   assert.ok(html.indexOf("<h3>HTML Weekly Pick 7</h3>") > html.indexOf("<h2>Also Worth a Look</h2>"));
+});
+
+test("weekly html renders small highlight thumbnails for valid https images only", () => {
+  const withImage = makeRankedEvent({
+    id: "weekly-image",
+    title: "Weekly Image Pick",
+    artist: "Weekly Image Pick",
+    venue: "SeaMonster Lounge",
+    sourceName: "SeaMonster Lounge",
+    date: "2026-05-01",
+    imageUrl: "https://www.seamonsterlounge.com/images/weekly.jpg",
+    imageAlt: "Weekly Image Pick poster",
+    score: 30
+  });
+  const invalidImage = makeRankedEvent({
+    id: "weekly-invalid-image",
+    title: "Weekly Invalid Image Pick",
+    artist: "Weekly Invalid Image Pick",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    date: "2026-05-01",
+    imageUrl: "http://example.com/not-rendered.jpg",
+    score: 29
+  });
+
+  const html = generateWeeklyEmailHtml(
+    new Date("2026-05-01T12:00:00-07:00"),
+    [withImage, invalidImage],
+    "2026-05-01",
+    "2026-05-08"
+  );
+  const preview = generateWeeklyEmailPreview(
+    new Date("2026-05-01T12:00:00-07:00"),
+    [withImage],
+    "2026-05-01",
+    "2026-05-08"
+  );
+
+  assert.match(html, /<img src="https:\/\/www\.seamonsterlounge\.com\/images\/weekly\.jpg" width="112" alt="Weekly Image Pick poster"/);
+  assert.doesNotMatch(html, /http:\/\/example\.com\/not-rendered\.jpg/);
+  assert.doesNotMatch(preview, /weekly\.jpg/);
 });
 
 test("weekly top sections skip generic Royal Room happy hour listings", () => {

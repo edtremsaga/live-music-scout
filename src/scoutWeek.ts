@@ -1,7 +1,8 @@
 import { printScoutResult, runScout } from "./runScout.js";
 
 async function main(): Promise<void> {
-  const result = await runScout({ reportKind: "week" });
+  const includeEvaluatedShows = process.argv.includes("--full");
+  const result = await runScout({ reportKind: "week", includeEvaluatedShows });
   printScoutResult(result);
 }
 
