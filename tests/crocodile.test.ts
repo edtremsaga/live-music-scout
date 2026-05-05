@@ -6,6 +6,7 @@ import { extractCrocodileListings, parseCrocodile } from "../src/parsers/crocodi
 const SAMPLE_HTML = `
 <ul>
   <li>
+    <img src="https://img.ticketweb.com/moonchild.jpg" alt="Moonchild poster">
     <a href="https://www.ticketweb.com/event/moonchild-the-crocodile-tickets/1{{urlAskRef}}">Image: Moonchild, Brittney Carter</a>
     Moonchild, Brittney Carter Moonchild, Brittney Carter
     The Crocodile, Seattle, WA
@@ -87,6 +88,7 @@ test("extractCrocodileListings includes Crocodile and Madame Lou's and carefully
   assert.equal(listings[0].date, "2026-05-01");
   assert.equal(listings[0].time, "8:00 PM");
   assert.equal(listings[0].url, "https://www.ticketweb.com/event/moonchild-the-crocodile-tickets/1");
+  assert.equal(listings[0].imageUrl, "https://img.ticketweb.com/moonchild.jpg");
   assert.equal(listings[1].venue, "Madame Lou's");
   assert.equal(listings[2].venue, "Here - After");
 });
@@ -98,6 +100,7 @@ test("parseCrocodile normalizes included TicketWeb rows into scout events", () =
   assert.equal(result.candidateCount, 3);
   assert.equal(result.parserConfidence, "High");
   assert.equal(result.events[0].sourceName, "The Crocodile");
+  assert.equal(result.events[0].imageUrl, "https://img.ticketweb.com/moonchild.jpg");
   assert.equal(result.events[0].location, "2505 1st Ave, Seattle, WA 98121");
   assert.equal(result.events[0].genreHints.includes("Belltown club"), true);
   assert.match(result.events[0].basis, /included The Crocodile and Madame Lou's listings/);

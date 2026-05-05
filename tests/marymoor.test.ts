@@ -6,6 +6,7 @@ import { extractMarymoorListings, parseMarymoor } from "../src/parsers/marymoor.
 const SAMPLE_HTML = `
 <div class="tw-plugin-upcoming-event-list">
   <div class="tw-section">
+    <img src="https://www.marymoorlive.com/images/claypool.jpg" alt="Claypool Gold poster">
     <div class="tw-name">
       <a href="https://www.marymoorlive.com/tm-event/claypool-gold/" title="Event Name - Claypool Gold | 23 May 6:00 PM">Claypool Gold</a>
     </div>
@@ -36,6 +37,7 @@ test("extractMarymoorListings reads public static Marymoor rows", () => {
   assert.equal(listings[0].date, "2026-05-23");
   assert.equal(listings[0].time, "6:00 PM");
   assert.equal(listings[0].url, "https://www.marymoorlive.com/tm-event/claypool-gold/");
+  assert.equal(listings[0].imageUrl, "https://www.marymoorlive.com/images/claypool.jpg");
   assert.match(listings[0].description ?? "", /Les Claypool's Frog Brigade/);
 });
 
@@ -56,6 +58,7 @@ test("parseMarymoor normalizes public concert rows into scout events", () => {
   assert.equal(result.events[0].venue, "Marymoor Park");
   assert.equal(result.events[0].location, "6046 West Lake Sammamish Parkway NE, Redmond, WA 98052");
   assert.equal(result.events[0].sourceName, "Marymoor Park Concerts");
+  assert.equal(result.events[0].imageUrl, "https://www.marymoorlive.com/images/claypool.jpg");
   assert.equal(result.events[0].genreHints.includes("outdoor concert"), true);
   assert.match(result.statusMessage, /parsed Marymoor Live public concert rows/);
 });

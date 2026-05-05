@@ -28,7 +28,7 @@ function makeContext(): ParserContext {
 const FIXTURE_HTML = `
   <main>
     <article>
-      <a href="https://chopsuey.com/tm-event/beautiful-freaks/"><img alt="event-img"></a>
+      <a href="https://chopsuey.com/tm-event/beautiful-freaks/"><img alt="event-img" src="https://chopsuey.com/uploads/beautiful.jpg"></a>
       <a href="https://chopsuey.com/tm-event/beautiful-freaks/">Beautiful Freaks, Universe, Casino Youth, Fatal Femmes, Nerve Rot</a>
       <p>Thu 04.30</p>
       <p>Doors: 7:00 PM / Show: 7:30 PM</p>
@@ -52,6 +52,7 @@ test("extractChopSueyListings reads public TicketWeb-powered venue rows", () => 
   assert.equal(listings[0].date, "2026-04-30");
   assert.equal(listings[0].time, "7:30 PM");
   assert.equal(listings[0].url, "https://chopsuey.com/tm-event/beautiful-freaks/");
+  assert.equal(listings[0].imageUrl, "https://chopsuey.com/uploads/beautiful.jpg");
   assert.equal(listings[1].title, "House of Disco – A Night of Classic Disco & Modern House Anthems");
   assert.equal(listings[1].date, "2026-05-02");
   assert.equal(listings[1].time, "9:00 PM");
@@ -63,6 +64,8 @@ test("parseChopSuey normalizes listings into scout events", () => {
 
   assert.equal(result.events.length, 2);
   assert.equal(result.events[0].venue, "Chop Suey");
+  assert.equal(result.events[0].imageUrl, "https://chopsuey.com/uploads/beautiful.jpg");
+  assert.equal(result.events[0].imageAlt, "Beautiful Freaks, Universe, Casino Youth, Fatal Femmes, Nerve Rot event image");
   assert.equal(result.events[0].sourceName, "Chop Suey");
   assert.equal(result.events[0].location, "1325 E Madison St, Seattle, WA 98122");
   assert.equal(result.events[1].genreHints.includes("dance party"), false);

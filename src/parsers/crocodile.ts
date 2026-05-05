@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { cleanDisplayText, extractTime, getTonightKey, normalizeWhitespace, parseMonthDayText, stripHtml } from "../dateUtils.js";
+import { normalizePublicImageUrl } from "../imageUtils.js";
 import type { LiveMusicEvent, ParserContext, ParserResult } from "../types.js";
 
 const VENUE_DETAILS: Record<string, { location: string; hints: string[] }> = {
@@ -33,6 +34,7 @@ export type CrocodileListing = {
   time?: string;
   url: string;
   description?: string;
+  imageUrl?: string;
 };
 
 function makeId(input: string): string {
@@ -149,6 +151,12 @@ function makeDescription(blockText: string, title: string, venue: string): strin
   return description || undefined;
 }
 
+function extractImageUrl(block: string, context: ParserContext): string | undefined {
+  const rawUrl = block.match(/<img\b[^>]*\bsrc="([^"]+)"/i)?.[1]
+    ?? block.match(/<img\b[^>]*\bdata-src="([^"]+)"/i)?.[1];
+  return normalizePublicImageUrl(rawUrl, context.source.url);
+}
+
 export function extractCrocodileListings(html: string, context: ParserContext): CrocodileListing[] {
   const anchors = getTicketWebEventAnchors(html);
   const listings: CrocodileListing[] = [];
@@ -162,7 +170,9 @@ export function extractCrocodileListings(html: string, context: ParserContext): 
       continue;
     }
 
-    const block = html.slice(anchor.index, nextAnchor?.index ?? undefined);
+    const listItemStart = html.lastIndexOf("<li", anchor.index);
+    const blockStart = listItemStart >= 0 ? listItemStart : anchor.index;
+    const block = html.slice(blockStart, nextAnchor?.index ?? undefined);
     const blockText = cleanDisplayText(stripHtml(block));
 
     if (/cancelled/i.test(blockText) || hasExcludedVenue(blockText)) {
@@ -192,7 +202,8 @@ export function extractCrocodileListings(html: string, context: ParserContext): 
       date,
       time: extractTime(dateLine ?? ""),
       url: anchor.href,
-      description
+      description,
+      imageUrl: extractImageUrl(block, context)
     });
     seenUrls.add(anchor.href);
   }
@@ -231,6 +242,8 @@ export function parseCrocodile(html: string, context: ParserContext): ParserResu
       sourceName: context.source.name,
       genreHints: collectGenreHints(listing),
       description: listing.description,
+      imageUrl: listing.imageUrl,
+      imageAlt: listing.imageUrl ? `${listing.title} event image` : undefined,
       confidence: "High",
       basis: normalizeWhitespace([
         "Parsed from The Crocodile public TicketWeb organization calendar",

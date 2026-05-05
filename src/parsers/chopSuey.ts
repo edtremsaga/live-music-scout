@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { cleanDisplayText, extractTime, getTonightKey, normalizeWhitespace, stripHtml } from "../dateUtils.js";
+import { normalizePublicImageUrl } from "../imageUtils.js";
 import type { LiveMusicEvent, ParserContext, ParserResult } from "../types.js";
 
 const CHOP_SUEY_LOCATION = "1325 E Madison St, Seattle, WA 98122";
@@ -11,6 +12,7 @@ type ChopSueyListing = {
   time?: string;
   url: string;
   description?: string;
+  imageUrl?: string;
 };
 
 function makeId(input: string): string {
@@ -93,6 +95,12 @@ function extractShowTime(text: string): string | undefined {
   return doorsMatch ? extractTime(doorsMatch[1]) : undefined;
 }
 
+function extractImageUrl(block: string, context: ParserContext): string | undefined {
+  const rawUrl = block.match(/<img\b[^>]*\bsrc="([^"]+)"/i)?.[1]
+    ?? block.match(/<img\b[^>]*\bdata-src="([^"]+)"/i)?.[1];
+  return normalizePublicImageUrl(rawUrl, context.source.url);
+}
+
 export function extractChopSueyListings(html: string, context: ParserContext): ChopSueyListing[] {
   const titleAnchors = [...html.matchAll(/<a\b[^>]*href="([^"]*\/tm-event\/[^"]*)"[^>]*>([\s\S]*?)<\/a>/gi)]
     .map((match) => ({
@@ -113,8 +121,10 @@ export function extractChopSueyListings(html: string, context: ParserContext): C
       continue;
     }
 
+    const articleStart = html.lastIndexOf("<article", anchor.index);
+    const blockStart = articleStart >= 0 ? articleStart : anchor.index;
     const blockEnd = nextAnchor?.index ?? html.search(/<h\d[^>]*>\s*Venue Address\s*<\/h\d>/i);
-    const block = html.slice(anchor.index, blockEnd > anchor.index ? blockEnd : undefined);
+    const block = html.slice(blockStart, blockEnd > blockStart ? blockEnd : undefined);
     const blockText = cleanDisplayText(stripHtml(block));
     const date = parseShortDate(blockText, context);
 
@@ -133,7 +143,8 @@ export function extractChopSueyListings(html: string, context: ParserContext): C
       date,
       time,
       url: toAbsoluteUrl(anchor.href, context),
-      description: description || undefined
+      description: description || undefined,
+      imageUrl: extractImageUrl(block, context)
     });
     seenUrls.add(anchor.href);
   }
@@ -171,6 +182,8 @@ export function parseChopSuey(html: string, context: ParserContext): ParserResul
       sourceName: context.source.name,
       genreHints: collectGenreHints(listing),
       description: listing.description,
+      imageUrl: listing.imageUrl,
+      imageAlt: listing.imageUrl ? `${listing.title} event image` : undefined,
       confidence: "High",
       basis: normalizeWhitespace([
         "Parsed from Chop Suey public TicketWeb-powered venue event rows",

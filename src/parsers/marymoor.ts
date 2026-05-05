@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { cleanDisplayText, extractTime, getTonightKey, normalizeWhitespace, parseMonthDayText, stripHtml } from "../dateUtils.js";
+import { normalizePublicImageUrl } from "../imageUtils.js";
 import type { LiveMusicEvent, ParserContext, ParserResult } from "../types.js";
 
 const MARYMOOR_LOCATION = "6046 West Lake Sammamish Parkway NE, Redmond, WA 98052";
@@ -11,6 +12,7 @@ type MarymoorListing = {
   time?: string;
   url: string;
   description?: string;
+  imageUrl?: string;
 };
 
 function makeId(input: string): string {
@@ -24,6 +26,12 @@ function extractFirst(pattern: RegExp, value: string): string | undefined {
 function cleanDescription(value: string | undefined): string | undefined {
   const cleaned = normalizeWhitespace(stripHtml(value ?? ""));
   return cleaned || undefined;
+}
+
+function extractImageUrl(section: string, baseUrl: string): string | undefined {
+  const rawUrl = section.match(/<img\b[^>]*\bsrc="([^"]+)"/i)?.[1]
+    ?? section.match(/<img\b[^>]*\bdata-src="([^"]+)"/i)?.[1];
+  return normalizePublicImageUrl(rawUrl, baseUrl);
 }
 
 function collectGenreHints(listing: MarymoorListing): string[] {
@@ -79,7 +87,8 @@ export function extractMarymoorListings(html: string, now: Date, timezone: strin
       date,
       time,
       url,
-      description
+      description,
+      imageUrl: extractImageUrl(section, url)
     });
   }
 
@@ -116,6 +125,8 @@ export function parseMarymoor(html: string, context: ParserContext): ParserResul
       sourceName: context.source.name,
       genreHints: collectGenreHints(listing),
       description: listing.description,
+      imageUrl: listing.imageUrl,
+      imageAlt: listing.imageUrl ? `${listing.title} event image` : undefined,
       confidence: "High",
       basis: normalizeWhitespace([
         "Parsed from Marymoor Live public static event rows",

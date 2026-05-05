@@ -8,7 +8,7 @@ const SAMPLE_HTML = `
   <div class="event-list-event">
     <div class="event-list-image">
       <a class="event-list-image-link" href="/yellowcard%3A-the-up-up-down-down-tour/5637778332.p">
-        <img alt="Yellowcard image"/>
+        <img alt="Yellowcard image" src="/assets/yellowcard.jpg"/>
       </a>
     </div>
     <div class="event-list-details">
@@ -63,6 +63,7 @@ test("extractChateauSteMichelleListings reads public static event rows", () => {
     listings[0].url,
     "https://www.ste-michelle.com/yellowcard%3A-the-up-up-down-down-tour/5637778332.p"
   );
+  assert.equal(listings[0].imageUrl, "https://www.ste-michelle.com/assets/yellowcard.jpg");
   assert.match(listings[0].description ?? "", /New Found Glory and Plain White T's/);
   assert.doesNotMatch(listings[0].description ?? "", /Questions\?/);
 });
@@ -84,6 +85,7 @@ test("parseChateauSteMichelle normalizes public concert rows into scout events",
   assert.equal(result.events[0].venue, "Chateau Ste. Michelle Amphitheatre");
   assert.equal(result.events[0].location, "14111 NE 145th Street, Woodinville, WA 98072");
   assert.equal(result.events[0].sourceName, "Chateau Ste. Michelle Summer Concerts");
+  assert.equal(result.events[0].imageUrl, "https://www.ste-michelle.com/assets/yellowcard.jpg");
   assert.equal(result.events[0].confidence, "High");
   assert.equal(result.events[0].genreHints.includes("outdoor concert"), true);
   assert.match(result.statusMessage, /parsed Chateau Ste\. Michelle public summer concert rows/);

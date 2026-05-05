@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { cleanDisplayText, normalizeWhitespace, stripHtml } from "../dateUtils.js";
+import { normalizePublicImageUrl } from "../imageUtils.js";
 import type { LiveMusicEvent, ParserContext, ParserResult } from "../types.js";
 
 const WIX_WARMUP_DATA_ID = "wix-warmup-data";
@@ -39,6 +40,7 @@ type SeaMonsterListing = {
   description?: string;
   url: string;
   status?: number;
+  imageUrl?: string;
 };
 
 function makeId(input: string): string {
@@ -151,6 +153,45 @@ function collectGenreHints(event: WixEvent): string[] {
   return [...hints];
 }
 
+function findPublicImageUrl(value: unknown, sourceUrl: string): string | undefined {
+  if (typeof value === "string") {
+    const normalized = normalizePublicImageUrl(value, sourceUrl);
+    if (normalized && /(?:\.(?:jpe?g|png|webp)(?:\?|$)|static\.wixstatic\.com|static\.parastorage\.com)/i.test(normalized)) {
+      return normalized;
+    }
+
+    return undefined;
+  }
+
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const imageUrl = findPublicImageUrl(item, sourceUrl);
+      if (imageUrl) {
+        return imageUrl;
+      }
+    }
+
+    return undefined;
+  }
+
+  for (const [key, item] of Object.entries(value)) {
+    if (!/image|photo|media|thumbnail|poster|url/i.test(key)) {
+      continue;
+    }
+
+    const imageUrl = findPublicImageUrl(item, sourceUrl);
+    if (imageUrl) {
+      return imageUrl;
+    }
+  }
+
+  return undefined;
+}
+
 function normalizeWixEvent(event: WixEvent, context: ParserContext): SeaMonsterListing | undefined {
   const title = cleanDisplayText(event.title);
   const startDate = cleanDisplayText(event.scheduling?.config?.startDate);
@@ -175,7 +216,8 @@ function normalizeWixEvent(event: WixEvent, context: ParserContext): SeaMonsterL
     location,
     description: description || undefined,
     url,
-    status: event.status
+    status: event.status,
+    imageUrl: findPublicImageUrl(event, context.source.url)
   };
 }
 
@@ -227,6 +269,8 @@ export function parseSeaMonster(html: string, context: ParserContext): ParserRes
       description: listing.description
     }),
     description: listing.description,
+    imageUrl: listing.imageUrl,
+    imageAlt: listing.imageUrl ? `${listing.title} event image` : undefined,
     confidence: "High",
     basis: normalizeWhitespace([
       "Parsed from SeaMonster Lounge official public Wix Events listings",

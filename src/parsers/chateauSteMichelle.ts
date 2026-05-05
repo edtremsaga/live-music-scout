@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { cleanDisplayText, extractTime, getTonightKey, normalizeWhitespace, parseMonthDayText, stripHtml } from "../dateUtils.js";
+import { normalizePublicImageUrl } from "../imageUtils.js";
 import type { LiveMusicEvent, ParserContext, ParserResult } from "../types.js";
 
 const CHATEAU_BASE_URL = "https://www.ste-michelle.com";
@@ -13,6 +14,7 @@ type ChateauListing = {
   location?: string;
   description?: string;
   url: string;
+  imageUrl?: string;
 };
 
 function makeId(input: string): string {
@@ -47,6 +49,12 @@ function cleanDescription(value: string | undefined): string | undefined {
     .replace(/\bQuestions\?\s*See our Summer Concert FAQs\s*/i, "");
 
   return cleaned || undefined;
+}
+
+function extractImageUrl(block: string): string | undefined {
+  const rawUrl = block.match(/<img\b[^>]*\bsrc="([^"]+)"/i)?.[1]
+    ?? block.match(/<img\b[^>]*\bdata-src="([^"]+)"/i)?.[1];
+  return normalizePublicImageUrl(rawUrl, CHATEAU_BASE_URL);
 }
 
 function collectGenreHints(title: string, description?: string): string[] {
@@ -98,7 +106,8 @@ export function extractChateauSteMichelleListings(html: string, now: Date, timez
       time: extractTime(timeText),
       location: location || undefined,
       description,
-      url: toAbsoluteChateauUrl(href)
+      url: toAbsoluteChateauUrl(href),
+      imageUrl: extractImageUrl(block)
     });
   }
 
@@ -135,6 +144,8 @@ export function parseChateauSteMichelle(html: string, context: ParserContext): P
       sourceName: context.source.name,
       genreHints: collectGenreHints(listing.title, listing.description),
       description: listing.description,
+      imageUrl: listing.imageUrl,
+      imageAlt: listing.imageUrl ? `${listing.title} event image` : undefined,
       confidence: "High",
       basis: normalizeWhitespace([
         "Parsed from Chateau Ste. Michelle public summer concert rows",

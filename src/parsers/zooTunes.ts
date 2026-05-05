@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { cleanDisplayText, getTonightKey, normalizeWhitespace, parseMonthDayText, stripHtml } from "../dateUtils.js";
+import { normalizePublicImageUrl } from "../imageUtils.js";
 import type { LiveMusicEvent, ParserContext, ParserResult } from "../types.js";
 
 const ZOOTUNES_LOCATION = "5500 Phinney Ave N, Seattle, WA 98103";
@@ -11,6 +12,7 @@ type ZooTunesListing = {
   date: string;
   url: string;
   description?: string;
+  imageUrl?: string;
 };
 
 function makeId(input: string): string {
@@ -28,6 +30,12 @@ function cleanDescription(value: string | undefined): string | undefined {
 
 function extractTicketUrl(block: string): string | undefined {
   return extractFirst(/<a[^>]+href="(https:\/\/www\.etix\.com\/ticket\/p\/[^"]+)"[^>]*>\s*Buy\s+TICKETS\s*<\/a>/i, block);
+}
+
+function extractImageUrl(block: string): string | undefined {
+  const rawUrl = block.match(/<img\b[^>]*\bsrc="([^"]+)"/i)?.[1]
+    ?? block.match(/<img\b[^>]*\bdata-src="([^"]+)"/i)?.[1];
+  return normalizePublicImageUrl(rawUrl, ZOOTUNES_PAGE_URL);
 }
 
 function collectGenreHints(listing: ZooTunesListing): string[] {
@@ -72,7 +80,8 @@ export function extractZooTunesListings(html: string, now: Date, timezone: strin
       title,
       date,
       url: ticketUrl ?? ZOOTUNES_PAGE_URL,
-      description: cleanDescription(block.includes("SOLD OUT") ? "SOLD OUT" : undefined)
+      description: cleanDescription(block.includes("SOLD OUT") ? "SOLD OUT" : undefined),
+      imageUrl: extractImageUrl(block)
     });
   }
 
@@ -108,6 +117,8 @@ export function parseZooTunes(html: string, context: ParserContext): ParserResul
       sourceName: context.source.name,
       genreHints: collectGenreHints(listing),
       description: listing.description,
+      imageUrl: listing.imageUrl,
+      imageAlt: listing.imageUrl ? `${listing.title} event image` : undefined,
       confidence: "High",
       basis: normalizeWhitespace([
         "Parsed from the public ZooTunes page concert blocks",

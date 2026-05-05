@@ -35,6 +35,7 @@ const SAMPLE_HTML = `
           "@type": "MusicEvent",
           "name": "Florence + The Machine",
           "description": "Everybody Scream Tour",
+          "image": "https://s1.ticketm.net/florence.jpg",
           "startDate": "2026-05-12T19:30:00",
           "url": "https://www.ticketmaster.com/florence-the-machine-seattle-washington-05-12-2026/event/0F0062E2",
           "location": { "name": "Climate Pledge Arena" }
@@ -116,6 +117,8 @@ test("normalizeClimatePledgeEvent accepts only Climate Pledge MusicEvent entries
   assert.equal(first.time, "7:30 PM");
   assert.equal(first.location, "334 1st Ave N, Seattle, WA 98109");
   assert.equal(first.sourceName, "Climate Pledge Arena");
+  assert.equal(first.imageUrl, "https://s1.ticketm.net/florence.jpg");
+  assert.equal(first.imageAlt, "Florence + The Machine event image");
   assert.equal(first.confidence, "High");
   assert.equal(first.genreHints.includes("large arena concert"), true);
   assert.equal(first.genreHints.includes("Ticketmaster MusicEvent"), true);

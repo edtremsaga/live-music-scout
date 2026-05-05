@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { extractZooTunesListings, parseZooTunes } from "../src/parsers/zooTunes.js";
 
 const SAMPLE_HTML = `
-<figure class="wp-block-image size-full"><img src="yacht.jpg" /></figure>
+<figure class="wp-block-image size-full"><img src="/images/yacht.jpg" /></figure>
 <h4 class="wp-block-heading has-text-align-left">Yacht Rock Revue</h4>
 <p class="has-text-align-left"><strong>June 4, 2026</strong></p>
 <div class="wp-block-button"><a class="wp-block-button__link has-custom-font-size wp-element-button" href="https://www.etix.com/ticket/p/82884719/yacht-rock-revue-primetime-seattle-woodland-park-zoo">Buy TICKETS</a></div>
@@ -28,6 +28,7 @@ test("extractZooTunesListings reads public ZooTunes concert blocks", () => {
     listings[0].url,
     "https://www.etix.com/ticket/p/82884719/yacht-rock-revue-primetime-seattle-woodland-park-zoo"
   );
+  assert.equal(listings[0].imageUrl, "https://www.zoo.org/images/yacht.jpg");
   assert.equal(listings[1].title, "Belle and Sebastian 30th Anniversary Tour “If You’re Feeling Sinister” with Quasi");
   assert.equal(listings[1].date, "2026-06-14");
   assert.equal(listings[1].url, "https://www.zoo.org/zootunes");
@@ -51,6 +52,7 @@ test("parseZooTunes normalizes public concert blocks into scout events", () => {
   assert.equal(result.events[0].venue, "Woodland Park Zoo");
   assert.equal(result.events[0].location, "5500 Phinney Ave N, Seattle, WA 98103");
   assert.equal(result.events[0].sourceName, "Woodland Park Zoo / ZooTunes");
+  assert.equal(result.events[0].imageUrl, "https://www.zoo.org/images/yacht.jpg");
   assert.equal(result.events[0].genreHints.includes("ZooTunes"), true);
   assert.match(result.statusMessage, /parsed ZooTunes public concert blocks/);
 });

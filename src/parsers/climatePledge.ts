@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { cleanDisplayText, getTonightKey, normalizeWhitespace } from "../dateUtils.js";
+import { normalizePublicImageUrl } from "../imageUtils.js";
 import type { LiveMusicEvent, ParserContext, ParserResult } from "../types.js";
 
 const CLIMATE_PLEDGE_LOCATION = "334 1st Ave N, Seattle, WA 98109";
@@ -10,6 +11,7 @@ type TicketmasterJsonLdEvent = {
   url?: string;
   name?: string;
   description?: string;
+  image?: string | string[];
   startDate?: string;
   eventStatus?: string;
   location?: {
@@ -154,6 +156,8 @@ export function normalizeClimatePledgeEvent(event: TicketmasterJsonLdEvent, cont
 
   const description = cleanDisplayText(event.description);
   const dedupeKey = `${title}|${date}|${event.startDate ?? ""}|${url}`;
+  const rawImage = Array.isArray(event.image) ? event.image[0] : event.image;
+  const imageUrl = normalizePublicImageUrl(rawImage, context.source.url);
 
   return {
     id: makeId(dedupeKey),
@@ -167,6 +171,8 @@ export function normalizeClimatePledgeEvent(event: TicketmasterJsonLdEvent, cont
     sourceName: context.source.name,
     genreHints: collectGenreHints(event),
     description: description || undefined,
+    imageUrl,
+    imageAlt: imageUrl ? `${title} event image` : undefined,
     confidence: "High",
     basis: normalizeWhitespace([
       "Parsed from Ticketmaster public JSON-LD for Climate Pledge Arena",

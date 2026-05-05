@@ -14,6 +14,8 @@ export type LiveMusicEvent = {
   sourceName: string;
   genreHints: string[];
   description?: string;
+  imageUrl?: string;
+  imageAlt?: string;
   confidence: Confidence;
   basis: string;
 };

@@ -33,6 +33,9 @@ function makeFixtureHtml(): string {
                 title: "Suffering Yuckheads",
                 slug: "suffering-yuckheads-2026-04-29-19-30",
                 status: 0,
+                mainImage: {
+                  url: "https://static.wixstatic.com/media/suffering-yuckheads.jpg"
+                },
                 description: "Seattle’s oddball organ/drum duo mixes punk rock sensibility with improvisational tactics.",
                 location: {
                   name: "Sea Monster Lounge",
@@ -94,6 +97,7 @@ test("extractSeaMonsterListings reads official public Wix Events warmup data", (
     listings[0].url,
     "https://www.seamonsterlounge.com/event-info/suffering-yuckheads-2026-04-29-19-30"
   );
+  assert.equal(listings[0].imageUrl, "https://static.wixstatic.com/media/suffering-yuckheads.jpg");
   assert.match(listings[0].description ?? "", /organ\/drum duo/);
 });
 
@@ -112,4 +116,5 @@ test("parseSeaMonster normalizes public SeaMonster listings into scout events", 
   assert.equal(result.events[1].genreHints.includes("jazz"), true);
   assert.equal(result.events[1].genreHints.includes("brass"), true);
   assert.match(result.events[1].basis, /official public Wix Events listings/);
+  assert.equal(result.events[0].imageUrl, "https://static.wixstatic.com/media/suffering-yuckheads.jpg");
 });
