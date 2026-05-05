@@ -9,6 +9,8 @@
     "scout:email": "node --import tsx src/scoutEmail.ts",
     "scout:week": "node --import tsx src/scoutWeek.ts",
     "scout:week:full": "node --import tsx src/scoutWeek.ts --full",
+    "scout:week:slack": "node --import tsx src/scoutWeekSlack.ts",
+    "scout:week:slack:full": "node --import tsx src/scoutWeekSlack.ts --full",
     "scout:week:verify": "node --import tsx src/scoutWeekVerify.ts",
     "scout:week:email": "node --import tsx src/scoutWeekEmail.ts",
     "scout:week:email:full": "node --import tsx src/scoutWeekEmail.ts --full",
