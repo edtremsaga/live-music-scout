@@ -1,12 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { extractBakesPlaceListings } from "../src/parsers/bakesPlace.js";
+import { extractBakesPlaceListings, parseBakesPlace } from "../src/parsers/bakesPlace.js";
 
 const SAMPLE_HTML = `
 <div class="events-holder">
   <section>
     <div class="row event-content">
+      <div class="col-md-6 col-sm-6 col-xs-12 event-image-holder">
+        <img alt="Martin Ross &amp; The Bake&apos;s Place All-Stars event photo" class="event-image" src="//static.spotapps.co/spots/7f/2cd9847e2d4f8d8306b8c602e7a7ef/w926"/>
+      </div>
       <div class="col-md-6 col-sm-6 col-xs-12 event-text-holder">
         <h2>Martin Ross &amp; The Bake&apos;s Place All-Stars</h2>
         <h3>Friday May 1st</h3>
@@ -45,4 +48,27 @@ test("extractBakesPlaceListings pulls normalized event data from Bake's Place ev
     listings[0].url,
     "https://bakesplacebellevue.com/bellevue-bellevue-bake-s-place-bar-and-bistro-live-music"
   );
+  assert.equal(
+    listings[0].imageUrl,
+    "https://static.spotapps.co/spots/7f/2cd9847e2d4f8d8306b8c602e7a7ef/w926"
+  );
+});
+
+test("parseBakesPlace attaches normalized event image URLs", () => {
+  const result = parseBakesPlace(SAMPLE_HTML, {
+    now: new Date("2026-05-01T12:00:00-07:00"),
+    timezone: "America/Los_Angeles",
+    source: {
+      name: "Bake's Place",
+      url: "https://bakesplacebellevue.com/bellevue-bellevue-bake-s-place-bar-and-bistro-live-music",
+      parser: "bakesPlace"
+    }
+  });
+
+  assert.equal(result.events.length, 1);
+  assert.equal(
+    result.events[0].imageUrl,
+    "https://static.spotapps.co/spots/7f/2cd9847e2d4f8d8306b8c602e7a7ef/w926"
+  );
+  assert.equal(result.events[0].imageAlt, "Martin Ross & The Bake's Place All-Stars event image");
 });

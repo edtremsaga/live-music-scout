@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { getTonightKey, normalizeWhitespace, stripHtml } from "../dateUtils.js";
+import { normalizePublicImageUrl } from "../imageUtils.js";
 import type { LiveMusicEvent, ParserContext, ParserResult } from "../types.js";
 
 const BAKES_PLACE_LOCATION = "155 108th Avenue Northeast Ste. 110, Bellevue, WA 98004";
@@ -12,6 +13,7 @@ type BakesPlaceListing = {
   timeText?: string;
   description?: string;
   url: string;
+  imageUrl?: string;
 };
 
 function makeId(input: string): string {
@@ -35,6 +37,12 @@ function decodeBakesUrl(url: string): string {
   return url.startsWith("/")
     ? `https://bakesplacebellevue.com${url}`
     : url;
+}
+
+function extractEventImageUrl(block: string, baseUrl: string): string | undefined {
+  const imageTag = block.match(/<img\b[^>]*class=(["'])[^"']*\bevent-image\b[^"']*\1[^>]*>/i)?.[0];
+  const src = imageTag?.match(/\bsrc=(["'])(.*?)\1/i)?.[2];
+  return normalizePublicImageUrl(src, baseUrl);
 }
 
 function collectGenreHints(title: string, description?: string): string[] {
@@ -101,6 +109,7 @@ export function extractBakesPlaceListings(html: string, sourceUrl: string): Bake
     const startDateKey = formatDateKeyFromStart(normalizeWhitespace(startMatch[1]));
     const description = descriptionMatch ? normalizeWhitespace(stripHtml(descriptionMatch[1])) : undefined;
     const timeText = timeMatch ? normalizeWhitespace(stripHtml(timeMatch[1])) : undefined;
+    const url = decodeBakesUrl(sourceUrl);
 
     if (!title || !startDateKey) {
       continue;
@@ -112,7 +121,8 @@ export function extractBakesPlaceListings(html: string, sourceUrl: string): Bake
       startDateKey,
       timeText,
       description,
-      url: decodeBakesUrl(sourceUrl)
+      url,
+      imageUrl: extractEventImageUrl(block, url)
     });
   }
 
@@ -159,6 +169,8 @@ export function parseBakesPlace(html: string, context: ParserContext): ParserRes
       sourceName: context.source.name,
       genreHints: collectGenreHints(listing.title, listing.description),
       description: listing.description,
+      imageUrl: listing.imageUrl,
+      imageAlt: listing.imageUrl ? `${listing.title} event image` : undefined,
       confidence: "High",
       basis: normalizeWhitespace([
         "Parsed from Bake's Place live music event blocks",
