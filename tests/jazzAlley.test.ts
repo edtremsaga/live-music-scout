@@ -1,7 +1,29 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { extractJazzAlleyPerformanceMap, parseJazzAlleyDateRange } from "../src/parsers/jazzAlley.js";
+import { extractJazzAlleyCalendarEntries, extractJazzAlleyPerformanceMap, parseJazzAlleyDateRange } from "../src/parsers/jazzAlley.js";
+
+test("Jazz Alley calendar entries include normalized image URLs", () => {
+  const html = `
+    <div class="news-box">
+      <div class="img-box">
+        <a href="/www-home/artist.jsp?shownum=8772"><img src="/www-home/gallery/spyro2025_3.jpg" alt="Artist Gallery Photo" width="310" height="155" /></a>
+      </div>
+      <div class="text-box">
+        <a href="/www-home/artist.jsp?shownum=8772"><h2>Spyro Gyra</h2></a>
+        <em class="date">Thu, May 7 - Sun, May 10, 2026<br /></em>
+        <p>Multi-platinum, 12x Grammy-nominated jazz legends</p>
+      </div>
+      <a href="/www-home/artist.jsp?shownum=8772" class="btn">info</a>
+    </div>
+    </div>
+  `;
+
+  const entries = extractJazzAlleyCalendarEntries(html);
+
+  assert.equal(entries[0].title, "Spyro Gyra");
+  assert.equal(entries[0].imageUrl, "https://www.jazzalley.com/www-home/gallery/spyro2025_3.jpg");
+});
 
 test("Jazz Alley date range expands across multiple nights", () => {
   const dates = parseJazzAlleyDateRange(

@@ -308,7 +308,7 @@ test("SeaMonster highlights use venue-specific why-line wording", () => {
 
   const output = generateEmailPreview(new Date("2026-04-29T12:00:00-07:00"), [event]);
 
-  assert.match(output, /Why it looks good: A solid SeaMonster show/);
+  assert.match(output, /Why it looks good: Credible local club show at a trusted venue\./);
 });
 
 test("Neumos and Barboza highlights use venue-specific why-line wording", () => {
@@ -424,8 +424,8 @@ test("why-lines use event-specific release and tribute cues before venue boilerp
     "2026-05-08"
   );
 
-  assert.match(output, /Why it looks good: Cool album release party at Conor Byrne\./);
-  assert.match(output, /Why it looks good: If you like Big Thief, this could be a fun one at Conor Byrne\./);
+  assert.match(output, /Why it looks good: Album release show with a stronger one-night-only signal at Conor Byrne\./);
+  assert.match(output, /Why it looks good: Tribute show with a clear hook for Big Thief fans at Conor Byrne\./);
 });
 
 test("why-lines vary repeated same-venue stems inside one section", () => {
@@ -457,8 +457,8 @@ test("why-lines vary repeated same-venue stems inside one section", () => {
 
   assert.equal(whyLines.length, 2);
   assert.notEqual(whyLines[0], whyLines[1]);
-  assert.match(whyLines[0], /A solid SeaMonster show/);
-  assert.match(whyLines[1], /Good SeaMonster show/);
+  assert.match(whyLines[0], /Credible local club show at SeaMonster/);
+  assert.match(whyLines[1], /Worth a look if you want a smaller local show/);
 });
 
 test("why-lines avoid banned editorial phrases", () => {
@@ -506,8 +506,70 @@ test("why-lines avoid banned editorial phrases", () => {
   );
   const whyText = Array.from(output.matchAll(/Why it looks good: (.*)/g), (match) => match[1].toLowerCase()).join("\n");
 
-  assert.match(output, /Why it looks good: If you like WEEN, this could be a fun one at Skylark\./);
+  assert.match(output, /Why it looks good: Tribute show with a clear hook for WEEN fans at Skylark\./);
   assert.doesNotMatch(whyText, /supported by|lane|occasion energy|nightlife-shaped|discovery upside|compelling|elevated|robust|standout|worth a look|strong option|musicianship-first|crowd energy|vibe|local-scene feel|source material|single release show/);
+});
+
+test("my-take lines vary repeated Bake's Place and Tractor signals", () => {
+  const events = [
+    makeRankedEvent({
+      id: "bakes-one",
+      title: "Bake's One",
+      artist: "Bake's One",
+      venue: "Bake's Place",
+      sourceName: "Bake's Place",
+      date: "2026-05-01",
+      url: "https://bakesplacebellevue.com/event/one",
+      score: 30,
+      matchReasons: ["Bake's Place gets a modest Eastside convenience boost"]
+    }),
+    makeRankedEvent({
+      id: "bakes-two",
+      title: "Bake's Two",
+      artist: "Bake's Two",
+      venue: "Bake's Place",
+      sourceName: "Bake's Place",
+      date: "2026-05-02",
+      url: "https://bakesplacebellevue.com/event/two",
+      score: 29,
+      matchReasons: ["Bake's Place gets a modest Eastside convenience boost"]
+    }),
+    makeRankedEvent({
+      id: "tractor-one",
+      title: "Tractor Roots One",
+      artist: "Tractor Roots One",
+      venue: "Tractor Tavern",
+      sourceName: "Tractor Tavern",
+      date: "2026-05-03",
+      url: "https://www.ticketweb.com/event/tractor-one",
+      score: 28
+    }),
+    makeRankedEvent({
+      id: "tractor-two",
+      title: "Tractor Roots Two",
+      artist: "Tractor Roots Two",
+      venue: "Tractor Tavern",
+      sourceName: "Tractor Tavern",
+      date: "2026-05-04",
+      url: "https://www.ticketweb.com/event/tractor-two",
+      score: 27
+    })
+  ];
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-05-01T12:00:00-07:00"),
+    events,
+    "2026-05-01",
+    "2026-05-08"
+  );
+  const takeLines = Array.from(output.matchAll(/My take: (.*)/g), (match) => match[1]);
+  const bakesTakes = takeLines.filter((line) => /Bellevue|Eastside|Seattle drive/.test(line));
+  const tractorTakes = takeLines.filter((line) => /Tractor|Ballard/.test(line));
+
+  assert.equal(bakesTakes.length, 2);
+  assert.equal(new Set(bakesTakes).size, 2);
+  assert.equal(tractorTakes.length, 2);
+  assert.equal(new Set(tractorTakes).size, 2);
 });
 
 test("generic weekly why-line uses this-week wording", () => {
@@ -932,7 +994,7 @@ test("weekly html includes Also Worth a Look when secondary picks exist", () => 
   assert.ok(html.indexOf("<h3>HTML Weekly Pick 7</h3>") > html.indexOf("<h2>Also Worth a Look</h2>"));
 });
 
-test("weekly html renders small highlight thumbnails for valid https images only", () => {
+test("weekly html renders thumbnails only for usable image URLs", () => {
   const withImage = makeRankedEvent({
     id: "weekly-image",
     title: "Weekly Image Pick",
@@ -954,10 +1016,30 @@ test("weekly html renders small highlight thumbnails for valid https images only
     imageUrl: "http://example.com/not-rendered.jpg",
     score: 29
   });
+  const placeholderImage = makeRankedEvent({
+    id: "weekly-placeholder-image",
+    title: "Weekly Placeholder Image Pick",
+    artist: "Weekly Placeholder Image Pick",
+    venue: "Bake's Place",
+    sourceName: "Bake's Place",
+    date: "2026-05-01",
+    imageUrl: "https://example.com/images/placeholder.jpg",
+    score: 28
+  });
+  const malformedImage = makeRankedEvent({
+    id: "weekly-malformed-image",
+    title: "Weekly Malformed Image Pick",
+    artist: "Weekly Malformed Image Pick",
+    venue: "The Royal Room",
+    sourceName: "The Royal Room",
+    date: "2026-05-01",
+    imageUrl: "not-a-url",
+    score: 27
+  });
 
   const html = generateWeeklyEmailHtml(
     new Date("2026-05-01T12:00:00-07:00"),
-    [withImage, invalidImage],
+    [withImage, invalidImage, placeholderImage, malformedImage],
     "2026-05-01",
     "2026-05-08"
   );
@@ -968,9 +1050,53 @@ test("weekly html renders small highlight thumbnails for valid https images only
     "2026-05-08"
   );
 
-  assert.match(html, /<img src="https:\/\/www\.seamonsterlounge\.com\/images\/weekly\.jpg" width="112" alt="" role="presentation"/);
+  assert.match(html, /<img src="https:\/\/www\.seamonsterlounge\.com\/images\/weekly\.jpg" width="112" alt="Weekly Image Pick poster"/);
   assert.doesNotMatch(html, /http:\/\/example\.com\/not-rendered\.jpg/);
+  assert.doesNotMatch(html, /placeholder\.jpg/);
+  assert.doesNotMatch(html, /not-a-url/);
+  assert.match(html, /<h3>Weekly Invalid Image Pick<\/h3><ul>/);
+  assert.match(html, /<h3>Weekly Placeholder Image Pick<\/h3><ul>/);
+  assert.match(html, /<h3>Weekly Malformed Image Pick<\/h3><ul>/);
   assert.doesNotMatch(preview, /weekly\.jpg/);
+});
+
+test("tonight html renders usable thumbnails and suppresses broken image artifacts", () => {
+  const withImage = makeRankedEvent({
+    id: "tonight-image",
+    title: "Tonight Image Pick",
+    artist: "Tonight Image Pick",
+    venue: "SeaMonster Lounge",
+    sourceName: "SeaMonster Lounge",
+    date: "2026-05-01",
+    imageUrl: "https://www.seamonsterlounge.com/images/tonight.jpg",
+    score: 30
+  });
+  const withoutImage = makeRankedEvent({
+    id: "tonight-no-image",
+    title: "Tonight No Image Pick",
+    artist: "Tonight No Image Pick",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    date: "2026-05-01",
+    score: 29
+  });
+  const malformedImage = makeRankedEvent({
+    id: "tonight-bad-image",
+    title: "Tonight Bad Image Pick",
+    artist: "Tonight Bad Image Pick",
+    venue: "The Royal Room",
+    sourceName: "The Royal Room",
+    date: "2026-05-01",
+    imageUrl: "https://example.com/bad image.jpg",
+    score: 28
+  });
+
+  const html = generateEmailHtml(new Date("2026-05-01T12:00:00-07:00"), [withImage, withoutImage, malformedImage]);
+
+  assert.match(html, /<img src="https:\/\/www\.seamonsterlounge\.com\/images\/tonight\.jpg" width="112" alt="Tonight Image Pick event image"/);
+  assert.doesNotMatch(html, /bad image\.jpg/);
+  assert.match(html, /<h3>Tonight No Image Pick<\/h3><ul>/);
+  assert.match(html, /<h3>Tonight Bad Image Pick<\/h3><ul>/);
 });
 
 test("weekly top sections skip generic Royal Room happy hour listings", () => {

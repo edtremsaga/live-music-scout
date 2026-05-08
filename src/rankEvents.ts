@@ -88,6 +88,25 @@ function hasAny(text: string, terms: string[]): boolean {
 
 const RELEASE_SHOW_TERMS = ["album release", "record release", "release show"];
 const BENEFIT_OR_FUNDRAISER_TERMS = ["benefit concert", "fundraiser", "benefit for"];
+const KNOWN_ACTS = ["spyro gyra"];
+const SEATED_QUALITY_VENUES = ["dimitriou's jazz alley", "jazz alley", "the triple door", "bake's place"];
+const GENERIC_LATE_NIGHT_VENUES = ["seamonster lounge", "nectar lounge", "hidden hall", "chop suey"];
+const GENERIC_LATE_NIGHT_SCORE_CAP = 18;
+const RECURRING_REGULAR_SHOWS = ["funky 2 death", "700 funk", "ron weinstein trio"];
+const RECURRING_REGULAR_SHOW_SCORE_CAP = 14;
+const LATE_NIGHT_STRONG_DETAIL_TERMS = [
+  " w/ ",
+  " feat.",
+  " with ",
+  "trio",
+  "quartet",
+  "quintet",
+  "sextet",
+  "septet",
+  "ensemble",
+  "orchestra",
+  "plays the music"
+];
 const ARTIST_DETAIL_TERMS = [
   " w/ ",
   " feat.",
@@ -104,6 +123,97 @@ const ARTIST_DETAIL_TERMS = [
   "plays the music"
 ];
 
+function getKnownActMatch(blob: string): string | undefined {
+  return KNOWN_ACTS.find((act) => blob.includes(act));
+}
+
+function isSeatedQualityShow(blob: string): boolean {
+  return SEATED_QUALITY_VENUES.some((venue) => blob.includes(venue)) || blob.includes("seated");
+}
+
+function isBakesPlace(event: ClassifiedEvent): boolean {
+  const venueText = `${event.venue} ${event.sourceName}`.toLowerCase();
+  return venueText.includes("bake's place");
+}
+
+function parseStartHour(time?: string): number | undefined {
+  if (!time) {
+    return undefined;
+  }
+
+  const match = time.match(/\b(\d{1,2})(?::\d{2})?\s*(AM|PM)\b/i);
+  if (!match) {
+    return undefined;
+  }
+
+  const hour = Number(match[1]);
+  const period = match[2].toUpperCase();
+  if (Number.isNaN(hour)) {
+    return undefined;
+  }
+
+  if (period === "AM") {
+    return hour === 12 ? 0 : hour;
+  }
+
+  return hour === 12 ? 12 : hour + 12;
+}
+
+function hasStrongerArtistOrShowSignal(event: ClassifiedEvent, blob: string, knownActMatch?: string): boolean {
+  const titleBlob = [event.title, event.artist].filter(Boolean).join(" ").toLowerCase();
+
+  return Boolean(
+    knownActMatch
+      || hasAny(titleBlob, RELEASE_SHOW_TERMS)
+      || titleBlob.includes("tribute")
+      || titleBlob.includes("benefit concert")
+      || hasAny(titleBlob, LATE_NIGHT_STRONG_DETAIL_TERMS)
+      || titleBlob.includes("+")
+      || titleBlob.includes(",")
+      || blob.includes("seated")
+  );
+}
+
+function isGenericLateNightVenueConfidencePick(
+  event: ClassifiedEvent,
+  blob: string,
+  knownActMatch?: string
+): boolean {
+  const hour = parseStartHour(event.time);
+  if (hour === undefined || hour < 22) {
+    return false;
+  }
+
+  const venueText = `${event.venue} ${event.sourceName}`.toLowerCase();
+  if (!GENERIC_LATE_NIGHT_VENUES.some((venue) => venueText.includes(venue))) {
+    return false;
+  }
+
+  return !hasStrongerArtistOrShowSignal(event, blob, knownActMatch);
+}
+
+function isRecurringRegularShow(event: ClassifiedEvent): boolean {
+  const titleText = [event.title, event.artist].filter(Boolean).join(" ").toLowerCase();
+  return RECURRING_REGULAR_SHOWS.some((show) => titleText.includes(show));
+}
+
+function hasSpecialEventSignal(event: ClassifiedEvent, blob: string, knownActMatch?: string): boolean {
+  const titleBlob = [event.title, event.artist].filter(Boolean).join(" ").toLowerCase();
+
+  return Boolean(
+    knownActMatch
+      || hasAny(titleBlob, RELEASE_SHOW_TERMS)
+      || titleBlob.includes("tribute")
+      || titleBlob.includes("benefit concert")
+      || titleBlob.includes(" w/ ")
+      || titleBlob.includes(" feat.")
+      || titleBlob.includes(" with ")
+      || titleBlob.includes("+")
+      || titleBlob.includes(",")
+      || blob.includes("seated")
+  );
+}
+
 export function rankEvents(
   events: ClassifiedEvent[],
   preferences: Preferences,
@@ -117,11 +227,27 @@ export function rankEvents(
       const venueMatches = containsAny(blob, preferences.venuePreferences);
       const frictionMatches = containsAny(blob, preferences.avoidSignals);
       const isSeen = seenEventIds.has(event.id);
+      const knownActMatch = getKnownActMatch(blob);
 
       let score = 0;
       const matchReasons: string[] = [];
 
       score += addVenueAwareScoring(blob, matchReasons);
+
+      if (knownActMatch) {
+        score += 8;
+        matchReasons.push(`known act signal: ${knownActMatch}`);
+      }
+
+      if (isSeatedQualityShow(blob)) {
+        score += 4;
+        matchReasons.push("seated-quality venue or show can compete with club venue confidence");
+      }
+
+      if (isBakesPlace(event)) {
+        score += 3;
+        matchReasons.push("Bake's Place gets a modest Eastside convenience boost");
+      }
 
       if (event.classification.isLikelyMusic) {
         score += event.classification.musicConfidence === "High" ? 4 : 2;
@@ -234,6 +360,20 @@ export function rankEvents(
       if (isSeen) {
         score -= 2;
         matchReasons.push("already seen before, so deprioritized");
+      }
+
+      if (isGenericLateNightVenueConfidencePick(event, blob, knownActMatch) && score > GENERIC_LATE_NIGHT_SCORE_CAP) {
+        score = GENERIC_LATE_NIGHT_SCORE_CAP;
+        matchReasons.push("generic late-night venue-confidence pick capped below stronger known/seated shows");
+      }
+
+      if (
+        isRecurringRegularShow(event)
+        && !hasSpecialEventSignal(event, blob, knownActMatch)
+        && score > RECURRING_REGULAR_SHOW_SCORE_CAP
+      ) {
+        score = RECURRING_REGULAR_SHOW_SCORE_CAP;
+        matchReasons.push("recurring regular show cap: capped at 14");
       }
 
       let verdict: RankedEvent["verdict"] = "Skip";

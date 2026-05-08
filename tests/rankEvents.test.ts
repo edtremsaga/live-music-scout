@@ -91,3 +91,113 @@ test("weekly highlights put album release ahead of vague benefit concert", () =>
 
   assert.ok(output.indexOf("### Som da Massa Album Release") < output.indexOf("### “The Work” A May Day Benefit Concert for OneAmerica"));
 });
+
+test("known seated Jazz Alley acts outrank generic late-night venue-confidence picks", () => {
+  const ranked = rankEvents(
+    classifyEvents([
+      makeEvent({
+        id: "generic-seamonster",
+        title: "700 Funk",
+        artist: "700 Funk",
+        venue: "SeaMonster Lounge",
+        date: "2026-05-09",
+        time: "10:00 PM",
+        location: "2202 N 45th St, Seattle, WA 98103",
+        url: "https://www.seamonsterlounge.com/events/700-funk",
+        sourceName: "SeaMonster Lounge",
+        genreHints: ["live music", "concert", "funk", "soul", "jazz", "jam", "SeaMonster Lounge"]
+      }),
+      makeEvent({
+        id: "spyro-gyra",
+        title: "Spyro Gyra",
+        artist: "Spyro Gyra",
+        venue: "Dimitriou's Jazz Alley",
+        date: "2026-05-09",
+        time: "7:30 PM",
+        location: "2033 6th Ave, Seattle, WA 98121",
+        url: "https://www.jazzalley.com/www-home/artist.jsp?shownum=1234",
+        sourceName: "Dimitriou's Jazz Alley",
+        genreHints: ["jazz"]
+      })
+    ]),
+    preferences,
+    new Set()
+  );
+
+  const spyro = ranked.find((event) => event.id === "spyro-gyra");
+  const genericSeaMonster = ranked.find((event) => event.id === "generic-seamonster");
+
+  assert.ok(spyro);
+  assert.ok(genericSeaMonster);
+  assert.ok(spyro.score > genericSeaMonster.score);
+  assert.equal(genericSeaMonster.score, 14);
+  assert.ok(spyro.matchReasons.some((reason) => reason.includes("known act signal")));
+  assert.ok(spyro.matchReasons.some((reason) => reason.includes("seated-quality")));
+  assert.ok(genericSeaMonster.matchReasons.some((reason) => reason.includes("capped")));
+});
+
+test("known recurring regular shows are capped without penalizing special SeaMonster events", () => {
+  const ranked = rankEvents(
+    classifyEvents([
+      makeEvent({
+        id: "ron-weinstein-trio",
+        title: "Ron Weinstein Trio",
+        artist: "Ron Weinstein Trio",
+        venue: "SeaMonster Lounge",
+        date: "2026-05-10",
+        time: "9:00 PM",
+        location: "2202 N 45th St, Seattle, WA 98103",
+        url: "https://www.seamonsterlounge.com/events/ron-weinstein-trio",
+        sourceName: "SeaMonster Lounge",
+        genreHints: ["live music", "concert", "jazz", "funk", "soul", "jam", "SeaMonster Lounge"]
+      }),
+      makeEvent({
+        id: "seamonster-special",
+        title: "New Record Release w/ Local Quartet",
+        artist: "New Record Release w/ Local Quartet",
+        venue: "SeaMonster Lounge",
+        date: "2026-05-10",
+        time: "9:00 PM",
+        location: "2202 N 45th St, Seattle, WA 98103",
+        url: "https://www.seamonsterlounge.com/events/new-record-release",
+        sourceName: "SeaMonster Lounge",
+        genreHints: ["live music", "concert", "jazz", "funk", "soul", "jam", "SeaMonster Lounge"]
+      })
+    ]),
+    preferences,
+    new Set()
+  );
+
+  const regular = ranked.find((event) => event.id === "ron-weinstein-trio");
+  const special = ranked.find((event) => event.id === "seamonster-special");
+
+  assert.ok(regular);
+  assert.ok(special);
+  assert.equal(regular.score, 14);
+  assert.ok(special.score > regular.score);
+  assert.ok(regular.matchReasons.some((reason) => reason.includes("recurring regular show cap")));
+  assert.ok(!special.matchReasons.some((reason) => reason.includes("recurring regular show cap")));
+});
+
+test("Bake's Place gets an explicit Eastside convenience boost", () => {
+  const ranked = rankEvents(
+    classifyEvents([
+      makeEvent({
+        id: "bakes-tribute",
+        title: "LuckyTown: A High-Octane Tribute to The Boss",
+        artist: "LuckyTown",
+        venue: "Bake's Place",
+        date: "2026-05-09",
+        time: "6:00 PM",
+        location: "155 108th Avenue Northeast Ste. 110, Bellevue, WA 98004",
+        url: "https://bakesplacebellevue.com/event/luckytown/",
+        sourceName: "Bake's Place",
+        genreHints: ["tribute", "rock", "live music"]
+      })
+    ]),
+    preferences,
+    new Set()
+  );
+
+  assert.ok(ranked[0].matchReasons.some((reason) => reason.includes("Eastside convenience")));
+});

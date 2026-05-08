@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 import { extractTime, normalizeWhitespace, parseMonthDayText, stripHtml } from "../dateUtils.js";
 import { fetchPage } from "../fetchPage.js";
+import { normalizePublicImageUrl } from "../imageUtils.js";
 import type { LiveMusicEvent, ParserContext, ParserResult } from "../types.js";
 
 const JAZZ_ALLEY_BASE_URL = "https://www.jazzalley.com";
@@ -12,6 +13,7 @@ type JazzAlleyCalendarEntry = {
   url: string;
   dateText: string;
   description?: string;
+  imageUrl?: string;
 };
 
 function makeId(input: string): string {
@@ -24,6 +26,13 @@ function toAbsoluteJazzAlleyUrl(url: string): string {
   }
 
   return new URL(url, JAZZ_ALLEY_BASE_URL).toString();
+}
+
+function extractJazzAlleyImageUrl(block: string): string | undefined {
+  const rawUrl = block.match(/<img\b[^>]*\bsrc="([^"]+)"/i)?.[1]
+    ?? block.match(/<img\b[^>]*\bdata-src="([^"]+)"/i)?.[1];
+
+  return normalizePublicImageUrl(rawUrl, `${JAZZ_ALLEY_BASE_URL}/www-home/calendar.jsp`);
 }
 
 export function extractJazzAlleyCalendarEntries(html: string): JazzAlleyCalendarEntry[] {
@@ -44,12 +53,13 @@ export function extractJazzAlleyCalendarEntries(html: string): JazzAlleyCalendar
     const title = normalizeWhitespace(stripHtml(titleMatch[2]));
     const dateText = normalizeWhitespace(stripHtml(dateMatch[1]));
     const description = descriptionMatch ? normalizeWhitespace(stripHtml(descriptionMatch[1])) : undefined;
+    const imageUrl = extractJazzAlleyImageUrl(block);
 
     if (!title || !dateText) {
       continue;
     }
 
-    entries.push({ title, url, dateText, description });
+    entries.push({ title, url, dateText, description, imageUrl });
   }
 
   return entries;
@@ -228,6 +238,8 @@ export async function parseJazzAlley(html: string, context: ParserContext): Prom
         sourceName: context.source.name,
         genreHints: collectGenreHints(entry.title, entry.description),
         description: entry.description,
+        imageUrl: entry.imageUrl,
+        imageAlt: entry.imageUrl ? `${entry.title} event image` : undefined,
         confidence: usedDetailSchedule ? "High" : "Medium",
         basis: basisParts.join("; ")
       });
