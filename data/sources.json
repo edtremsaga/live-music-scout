@@ -54,6 +54,18 @@
     "notes": "Live parser reads public TicketWeb-powered event rows from the official Chop Suey venue page"
   },
   {
+    "name": "Showbox Presents",
+    "url": "https://www.showboxpresents.com/events/all",
+    "parser": "showboxPresents",
+    "location": "Seattle, WA",
+    "areaTags": ["Seattle", "Downtown", "SoDo"],
+    "sourceType": "promoter",
+    "musicOnly": true,
+    "coveredVenues": ["Showbox at the Market", "Showbox SoDo"],
+    "parserStatus": "live",
+    "notes": "Live parser reads public static Showbox Presents event cards and includes only The Showbox and Showbox SoDo venue rows"
+  },
+  {
     "name": "Conor Byrne Pub",
     "url": "https://www.conorbyrnepub.com/#/events",
     "parser": "conorByrne",

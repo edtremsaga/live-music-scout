@@ -31,6 +31,7 @@ test("configured allowlist includes the new venue and seasonal sources", () => {
   assert.equal(names.has("Neumos"), true);
   assert.equal(names.has("Barboza"), true);
   assert.equal(names.has("Chop Suey"), true);
+  assert.equal(names.has("Showbox Presents"), true);
   assert.equal(names.has("Conor Byrne Pub"), true);
   assert.equal(names.has("The Crocodile"), true);
 });
@@ -102,6 +103,21 @@ test("Chop Suey is configured as a live parsed Capitol Hill venue source", () =>
   assert.equal(chopSuey.musicOnly, true);
   assert.equal(chopSuey.areaTags?.includes("Capitol Hill"), true);
   assert.match(chopSuey.notes ?? "", /public TicketWeb-powered event rows/i);
+});
+
+test("Showbox Presents is configured as a live parsed Showbox venue source", () => {
+  const sources = loadSources();
+  const showbox = sources.find((source) => source.name === "Showbox Presents");
+
+  assert.ok(showbox);
+  assert.equal(showbox.url, "https://www.showboxpresents.com/events/all");
+  assert.equal(showbox.parser, "showboxPresents");
+  assert.equal(showbox.parserStatus, "live");
+  assert.equal(showbox.sourceType, "promoter");
+  assert.equal(showbox.musicOnly, true);
+  assert.equal(showbox.coveredVenues?.includes("Showbox at the Market"), true);
+  assert.equal(showbox.coveredVenues?.includes("Showbox SoDo"), true);
+  assert.match(showbox.notes ?? "", /public static Showbox Presents event cards/i);
 });
 
 test("Conor Byrne Pub is configured as a live parsed Ballard venue source", () => {
