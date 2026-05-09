@@ -201,3 +201,64 @@ test("Bake's Place gets an explicit Eastside convenience boost", () => {
 
   assert.ok(ranked[0].matchReasons.some((reason) => reason.includes("Eastside convenience")));
 });
+
+test("known Showbox acts can compete without boosting every Showbox event equally", () => {
+  const ranked = rankEvents(
+    classifyEvents([
+      makeEvent({
+        id: "echo",
+        title: "Echo & The Bunnymen",
+        artist: "Echo & The Bunnymen",
+        venue: "Showbox SoDo",
+        date: "2026-05-12",
+        time: "8:00 PM",
+        location: "1700 1st Ave S, Seattle, WA 98134",
+        url: "https://www.showboxpresents.com/events/detail/1183923",
+        sourceName: "Showbox Presents",
+        genreHints: ["rock", "concert", "touring act", "Showbox SoDo"]
+      }),
+      makeEvent({
+        id: "generic-showbox",
+        title: "Good Kid",
+        artist: "Good Kid",
+        venue: "Showbox SoDo",
+        date: "2026-05-09",
+        time: "8:00 PM",
+        location: "1700 1st Ave S, Seattle, WA 98134",
+        url: "https://www.showboxpresents.com/events/detail/1237576",
+        sourceName: "Showbox Presents",
+        genreHints: ["rock", "concert", "touring act", "Showbox SoDo"]
+      }),
+      makeEvent({
+        id: "spyro-gyra",
+        title: "Spyro Gyra",
+        artist: "Spyro Gyra",
+        venue: "Dimitriou's Jazz Alley",
+        date: "2026-05-09",
+        time: "7:30 PM",
+        location: "2033 6th Ave, Seattle, WA 98121",
+        url: "https://www.jazzalley.com/www-home/artist.jsp?shownum=1234",
+        sourceName: "Dimitriou's Jazz Alley",
+        genreHints: ["jazz"]
+      })
+    ]),
+    preferences,
+    new Set()
+  );
+
+  const echo = ranked.find((event) => event.id === "echo");
+  const genericShowbox = ranked.find((event) => event.id === "generic-showbox");
+  const spyro = ranked.find((event) => event.id === "spyro-gyra");
+
+  assert.ok(echo);
+  assert.ok(genericShowbox);
+  assert.ok(spyro);
+  assert.ok(echo.score > genericShowbox.score);
+  assert.ok(echo.score > spyro.score);
+  assert.ok(echo.matchReasons.some((reason) => reason.includes("tier 1 personal-favorite known act signal")));
+  assert.ok(spyro.matchReasons.some((reason) => reason.includes("tier 3 friend-shareable known act signal")));
+  assert.ok(echo.matchReasons.some((reason) => reason.includes("strong personal taste signal: rock")));
+  assert.ok(echo.matchReasons.some((reason) => reason.includes("Showbox is a high-signal")));
+  assert.ok(genericShowbox.matchReasons.some((reason) => reason.includes("Showbox is a high-signal")));
+  assert.ok(!genericShowbox.matchReasons.some((reason) => reason.includes("known act")));
+});

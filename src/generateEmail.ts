@@ -261,8 +261,44 @@ type WhyLineContext = {
   usedTakes: Map<string, number>;
 };
 
+type RecommendationSection = "highlight" | "alsoWorth" | "evaluated";
+
+type KnownActCopyProfile = {
+  terms: string[];
+  tier: "personalFavorite" | "strongPersonalFit" | "friendShareable";
+  whyDescriptor: string;
+  takeGenre: string;
+};
+
+const KNOWN_ACT_COPY_PROFILES: KnownActCopyProfile[] = [
+  {
+    terms: ["echo & the bunnymen"],
+    tier: "personalFavorite",
+    whyDescriptor: "Landmark 1980s alt/new-wave band",
+    takeGenre: "rock"
+  },
+  {
+    terms: ["spyro gyra"],
+    tier: "friendShareable",
+    whyDescriptor: "Known act",
+    takeGenre: "jazz-club"
+  }
+];
+
 function createWhyLineContext(): WhyLineContext {
   return { usedStems: new Map(), usedTakes: new Map() };
+}
+
+function cleanDisplayTitle(value: string | undefined): string {
+  return publicText(value)
+    .replace(/^[\s🎸🌙⭐✨🔥🎤🎵🎶•·\-–—:|]+/u, "")
+    .replace(/[\s🎸🌙⭐✨🔥🎤🎵🎶•·\-–—:|]+$/u, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getEventDisplayTitle(event: Pick<RankedEvent, "title" | "artist">): string {
+  return cleanDisplayTitle(event.artist ?? event.title);
 }
 
 function hasBillSeparator(title: string): boolean {
@@ -291,6 +327,15 @@ function hasMatchReason(event: RankedEvent, text: string): boolean {
 
 function isKnownActPick(event: RankedEvent): boolean {
   return hasMatchReason(event, "known act signal");
+}
+
+function getKnownActCopyProfile(event: RankedEvent): KnownActCopyProfile | undefined {
+  const blob = getEventTextBlob(event);
+  return KNOWN_ACT_COPY_PROFILES.find((profile) => profile.terms.some((term) => blob.includes(term)));
+}
+
+function isPersonalFavoriteKnownAct(event: RankedEvent): boolean {
+  return hasMatchReason(event, "tier 1 personal-favorite known act signal");
 }
 
 function isSeatedQualityPick(event: RankedEvent): boolean {
@@ -394,10 +439,16 @@ function getPrimaryEventTag(tags: EventTag[]): EventTag | undefined {
 }
 
 function getEventLead(tag: EventTag | undefined, event: RankedEvent): string | undefined {
+  const knownActProfile = getKnownActCopyProfile(event);
+
   switch (tag) {
     case "known_act":
+      if (knownActProfile?.tier === "personalFavorite") return `${knownActProfile.whyDescriptor} at ${publicText(event.venue)}.`;
       if (event.venue === "Dimitriou's Jazz Alley") return "Known act at Jazz Alley with seated jazz-club showtimes.";
       if (isSeatedQualityPick(event)) return "Known act in a more comfortable seated-show setting.";
+      if ((event.venue === "Showbox SoDo" || event.venue === "Showbox at the Market") && knownActProfile) {
+        return `${knownActProfile.whyDescriptor} at a core Seattle rock venue.`;
+      }
       return "Known act with stronger name recognition than a generic club listing.";
     case "album_release":
       return getReleaseLine(event, "album");
@@ -482,6 +533,7 @@ function appendContext(base: string, context: string): string {
 
 function getReleaseLine(event: RankedEvent, kind: "album" | "single" | "EP"): string {
   if (kind === "album") {
+    if (event.venue === "Tractor Tavern") return "Album release at Tractor with a stronger one-night-only hook.";
     if (event.venue === "Conor Byrne Pub") return "Album release show with a stronger one-night-only signal at Conor Byrne.";
     if (event.venue === "Sunset Tavern") return "Album release show with a stronger one-night-only signal at Sunset.";
     return getShortVenuePhrase(event, "Album release show with a stronger one-night-only signal.");
@@ -747,11 +799,32 @@ function getTakeVariant(context: WhyLineContext | undefined, key: string, varian
   return variants[usedCount % variants.length];
 }
 
-function getMyTake(event: RankedEvent, context?: WhyLineContext): string {
+function getMyTake(event: RankedEvent, context?: WhyLineContext, section: RecommendationSection = "highlight"): string {
   const availability = getAvailabilityLine(event);
+  const knownActProfile = getKnownActCopyProfile(event);
 
   if (availability === "Sold out") {
     return "Worth tracking, but it’s sold out — check resale or future dates.";
+  }
+
+  if (section === "alsoWorth") {
+    if (isRecurringRegularShow(event)) {
+      return "Solid fallback, but not one of the strongest personal-fit picks.";
+    }
+
+    if (isBakesPlacePick(event)) {
+      return getTakeVariant(context, "bakes-eastside", [
+        "Good Eastside option when you want live music without making the Seattle run.",
+        "Bellevue-area fallback if Americana/classic rock fits your mood.",
+        "Convenient Eastside option, but not the week’s strongest personal-fit pick."
+      ]);
+    }
+
+    return "Worth a look if the artist or venue fits your mood.";
+  }
+
+  if (isPersonalFavoriteKnownAct(event) && knownActProfile) {
+    return `Top personal-fit ${knownActProfile.takeGenre} pick this week.`;
   }
 
   if (isKnownActPick(event) && event.venue === "Dimitriou's Jazz Alley") {
@@ -771,7 +844,7 @@ function getMyTake(event: RankedEvent, context?: WhyLineContext): string {
   }
 
   if (inferEventTags(event).includes("album_release")) {
-    return "Better than a generic club listing because it has a real event hook.";
+    return "Worth prioritizing over a generic club night because it is tied to a release.";
   }
 
   if (isRecurringRegularShow(event)) {
@@ -787,6 +860,10 @@ function getMyTake(event: RankedEvent, context?: WhyLineContext): string {
   }
 
   if (isSeatedQualityPick(event)) {
+    if (event.venue === "Tractor Tavern") {
+      return "Good choice if you want a rootsier club show with a partially seated setup.";
+    }
+
     return "Good choice if you want a lower-friction night out.";
   }
 
@@ -796,6 +873,10 @@ function getMyTake(event: RankedEvent, context?: WhyLineContext): string {
       "Worth a look for a Ballard club night with a rootsier tilt.",
       "Good small-room Tractor option without treating it as the week’s only priority."
     ]);
+  }
+
+  if (event.venue === "Conor Byrne Pub" && inferEventTags(event).includes("multi_band_bill")) {
+    return "Worth a look if you want a smaller Ballard multi-artist bill.";
   }
 
   if (event.verdict === "Go" && event.score >= 20) {
@@ -809,12 +890,12 @@ function getMyTake(event: RankedEvent, context?: WhyLineContext): string {
   return formatVerdict(event.verdict);
 }
 
-function renderHighlight(event: RankedEvent, context?: WhyLineContext): string {
+function renderHighlight(event: RankedEvent, context?: WhyLineContext, section: RecommendationSection = "highlight"): string {
   const why = buildWhyLine(event, "tonight", context);
   const timeNote = getTimeOfDayNote(event.time);
   const timeLine = timeNote ? `${event.time ?? "Unknown"} (${timeNote})` : (event.time ?? "Unknown");
   const availability = getAvailabilityLine(event);
-  const title = publicText(event.artist ?? event.title);
+  const title = getEventDisplayTitle(event);
   const venue = publicText(event.venue);
   const location = publicText(event.location ?? "Seattle area");
 
@@ -824,7 +905,7 @@ function renderHighlight(event: RankedEvent, context?: WhyLineContext): string {
     `- Time: ${timeLine}`,
     `- Location: ${location}`,
     `- Why it looks good: ${publicText(why)}`,
-    `- My take: ${publicText(getMyTake(event, context))}`,
+    `- My take: ${publicText(getMyTake(event, context, section))}`,
     `- Source: ${formatSourceLinkMarkdown(event)}`
   ];
 
@@ -862,7 +943,12 @@ function getEmailImageUrl(event: RankedEvent): string | undefined {
 }
 
 function getEmailImageAlt(event: RankedEvent, displayTitle: string): string {
-  return publicText(event.imageAlt) || `${displayTitle} event image`;
+  const rawAlt = publicText(event.imageAlt);
+  if (rawAlt) {
+    return rawAlt.replace(publicText(event.artist ?? event.title), displayTitle);
+  }
+
+  return `${displayTitle} event image`;
 }
 
 function wrapHtmlWithThumbnail(content: string, event: RankedEvent, displayTitle: string): string {
@@ -885,12 +971,12 @@ function wrapHtmlWithThumbnail(content: string, event: RankedEvent, displayTitle
   ].join("");
 }
 
-function renderHighlightHtml(event: RankedEvent, context?: WhyLineContext): string {
+function renderHighlightHtml(event: RankedEvent, context?: WhyLineContext, section: RecommendationSection = "highlight"): string {
   const why = buildWhyLine(event, "tonight", context);
   const timeNote = getTimeOfDayNote(event.time);
   const timeLine = timeNote ? `${event.time ?? "Unknown"} (${timeNote})` : (event.time ?? "Unknown");
   const availability = getAvailabilityLine(event);
-  const title = publicText(event.artist ?? event.title);
+  const title = getEventDisplayTitle(event);
   const venue = publicText(event.venue);
   const location = publicText(event.location ?? "Seattle area");
 
@@ -901,7 +987,7 @@ function renderHighlightHtml(event: RankedEvent, context?: WhyLineContext): stri
     `<li><strong>Time:</strong> ${escapeHtml(timeLine)}</li>`,
     `<li><strong>Location:</strong> ${escapeHtml(location)}</li>`,
     `<li><strong>Why it looks good:</strong> ${escapeHtml(publicText(why))}</li>`,
-    `<li><strong>My take:</strong> ${escapeHtml(publicText(getMyTake(event, context)))}</li>`,
+    `<li><strong>My take:</strong> ${escapeHtml(publicText(getMyTake(event, context, section)))}</li>`,
     `<li><strong>Source:</strong> ${formatSourceLinkHtml(event)}</li>`,
     "</ul>"
   ];
@@ -1010,7 +1096,7 @@ export function selectEmailSections(rankedEvents: RankedEvent[]): {
 }
 
 function renderEvaluatedItem(event: RankedEvent): string {
-  const title = publicText(event.artist ?? event.title);
+  const title = getEventDisplayTitle(event);
   const venue = publicText(event.venue);
   const timePart = event.time ? ` — ${event.time}` : "";
   const reason =
@@ -1026,7 +1112,7 @@ function renderEvaluatedItem(event: RankedEvent): string {
 }
 
 function renderEvaluatedItemHtml(event: RankedEvent): string {
-  const title = publicText(event.artist ?? event.title);
+  const title = getEventDisplayTitle(event);
   const venue = publicText(event.venue);
   const timePart = event.time ? ` — ${event.time}` : "";
   const reason =
@@ -1090,7 +1176,7 @@ function formatWeeklyTimes(events: RankedEvent[]): string | undefined {
 }
 
 function cleanGroupedHighlightDisplayTitle(value: string): string {
-  return publicText(value)
+  return cleanDisplayTitle(value)
     .replace(/\b(album release|record release|release show)\s+night\s+\d+\b(?:\s+w\/.*)?$/gi, "$1")
     .replace(/\s+\b(BOTH SHOWS|NIGHT ONE|NIGHT TWO|Night 1|Night 2)\b/gi, "")
     .replace(/\s+/g, " ")
@@ -1183,10 +1269,27 @@ function buildWeeklyGroupTake(group: WeeklyHighlightGroup, context?: WhyLineCont
     return "Good weekly planning option — pick the date that works best.";
   }
 
-  return getMyTake(representative, context);
+  return getMyTake(representative, context, "highlight");
 }
 
-function renderWeeklyHighlight(group: WeeklyHighlightGroup, context?: WhyLineContext): string {
+function buildWeeklyAlsoWorthGroupTake(group: WeeklyHighlightGroup, context?: WhyLineContext): string {
+  const allSoldOut = group.events.every((event) => getAvailabilityLine(event) === "Sold out");
+  if (allSoldOut) {
+    return "Worth tracking, but it’s sold out — check resale or future dates.";
+  }
+
+  if (group.events.length > 1) {
+    return "Good secondary option if that run fits your week.";
+  }
+
+  return getMyTake(group.representative, context, "alsoWorth");
+}
+
+function renderWeeklyHighlight(
+  group: WeeklyHighlightGroup,
+  context?: WhyLineContext,
+  section: RecommendationSection = "highlight"
+): string {
   const representative = group.representative;
   const titleSource = group.events.length > 1 ? representative.title : representative.artist ?? representative.title;
   const title = cleanGroupedHighlightDisplayTitle(titleSource);
@@ -1204,14 +1307,19 @@ function renderWeeklyHighlight(group: WeeklyHighlightGroup, context?: WhyLineCon
     `- Location: ${location}`,
     availability ? `- Availability: ${availability}` : undefined,
     `- Why it looks good: ${publicText(buildWhyLine(representative, "this week", context))}`,
-    `- My take: ${publicText(buildWeeklyGroupTake(group, context))}`,
+    `- My take: ${publicText(section === "alsoWorth" ? buildWeeklyAlsoWorthGroupTake(group, context) : buildWeeklyGroupTake(group, context))}`,
     `- Source: ${formatSourceLinkMarkdown(representative)}`
   ]
     .filter(Boolean)
     .join("\n");
 }
 
-function renderWeeklyHighlightHtml(group: WeeklyHighlightGroup, context?: WhyLineContext, includeImage = false): string {
+function renderWeeklyHighlightHtml(
+  group: WeeklyHighlightGroup,
+  context?: WhyLineContext,
+  includeImage = false,
+  section: RecommendationSection = "highlight"
+): string {
   const representative = group.representative;
   const titleSource = group.events.length > 1 ? representative.title : representative.artist ?? representative.title;
   const title = cleanGroupedHighlightDisplayTitle(titleSource);
@@ -1229,7 +1337,7 @@ function renderWeeklyHighlightHtml(group: WeeklyHighlightGroup, context?: WhyLin
     `<li><strong>Location:</strong> ${escapeHtml(location)}</li>`,
     availability ? `<li><strong>Availability:</strong> ${escapeHtml(availability)}</li>` : undefined,
     `<li><strong>Why it looks good:</strong> ${escapeHtml(publicText(buildWhyLine(representative, "this week", context)))}</li>`,
-    `<li><strong>My take:</strong> ${escapeHtml(publicText(buildWeeklyGroupTake(group, context)))}</li>`,
+    `<li><strong>My take:</strong> ${escapeHtml(publicText(section === "alsoWorth" ? buildWeeklyAlsoWorthGroupTake(group, context) : buildWeeklyGroupTake(group, context)))}</li>`,
     `<li><strong>Source:</strong> ${formatSourceLinkHtml(representative)}</li>`,
     "</ul>"
   ]
@@ -1388,7 +1496,7 @@ export function selectWeeklyEmailSections(rankedEvents: RankedEvent[]): {
 
 function renderWeeklyEvaluatedItem(event: RankedEvent, isHighlighted: boolean, isAlsoWorthALook = false): string {
   const reason = getWeeklyEvaluatedReason(event, isHighlighted, isAlsoWorthALook);
-  const title = publicText(event.artist ?? event.title);
+  const title = getEventDisplayTitle(event);
   const venue = publicText(event.venue);
   const timePart = event.time ? ` — ${event.time}` : "";
 
@@ -1397,7 +1505,7 @@ function renderWeeklyEvaluatedItem(event: RankedEvent, isHighlighted: boolean, i
 
 function renderWeeklyEvaluatedItemHtml(event: RankedEvent, isHighlighted: boolean, isAlsoWorthALook = false): string {
   const reason = getWeeklyEvaluatedReason(event, isHighlighted, isAlsoWorthALook);
-  const title = publicText(event.artist ?? event.title);
+  const title = getEventDisplayTitle(event);
   const venue = publicText(event.venue);
   const timePart = event.time ? ` — ${event.time}` : "";
 
@@ -1454,7 +1562,11 @@ function formatWeeklyDateLabelSlack(dates: string[]): string {
     : dates.map((date) => formatDateKeyShort(date)).join(" / ");
 }
 
-function renderWeeklyHighlightSlack(group: WeeklyHighlightGroup, context?: WhyLineContext): string {
+function renderWeeklyHighlightSlack(
+  group: WeeklyHighlightGroup,
+  context?: WhyLineContext,
+  section: RecommendationSection = "highlight"
+): string {
   const representative = group.representative;
   const titleSource = group.events.length > 1 ? representative.title : representative.artist ?? representative.title;
   const title = cleanGroupedHighlightDisplayTitle(titleSource);
@@ -1464,7 +1576,7 @@ function renderWeeklyHighlightSlack(group: WeeklyHighlightGroup, context?: WhyLi
   const dateLine = [formatWeeklyDateLabelSlack(dates), times].filter(Boolean).join(" · ");
   const availability = group.events.every((event) => getAvailabilityLine(event) === "Sold out") ? "Sold out" : undefined;
   const why = publicText(buildWhyLine(representative, "this week", context));
-  const take = publicText(buildWeeklyGroupTake(group, context));
+  const take = publicText(section === "alsoWorth" ? buildWeeklyAlsoWorthGroupTake(group, context) : buildWeeklyGroupTake(group, context));
 
   return [
     `*${escapeSlackText(title)}* — ${escapeSlackText(venue)}`,
@@ -1492,7 +1604,7 @@ function renderWeeklyAlsoWorthSlack(group: WeeklyHighlightGroup): string {
 
 function renderWeeklyEvaluatedItemSlack(event: RankedEvent, isHighlighted: boolean, isAlsoWorthALook = false): string {
   const reason = getWeeklyEvaluatedReason(event, isHighlighted, isAlsoWorthALook);
-  const title = publicText(event.artist ?? event.title);
+  const title = getEventDisplayTitle(event);
   const venue = publicText(event.venue);
   const heading = [venue, event.time]
     .filter((value): value is string => Boolean(value))
@@ -1522,7 +1634,7 @@ export function generateWeeklySlackReport(
     "*This Week’s Highlights*",
     "",
     highlights.length > 0
-      ? highlights.map((group) => renderWeeklyHighlightSlack(group, highlightsWhyContext)).join("\n\n")
+      ? highlights.map((group) => renderWeeklyHighlightSlack(group, highlightsWhyContext, "highlight")).join("\n\n")
       : "No strong highlights this week."
   ];
 
@@ -1610,13 +1722,13 @@ export function generateEmailPreview(now: Date, rankedEvents: RankedEvent[]): st
     `Date: ${formatTonightLong(now)}`,
     "",
     "## Tonight’s Highlights",
-    highlights.length > 0 ? highlights.map((event) => renderHighlight(event, highlightsWhyContext)).join("\n\n") : "No strong highlights tonight."
+    highlights.length > 0 ? highlights.map((event) => renderHighlight(event, highlightsWhyContext, "highlight")).join("\n\n") : "No strong highlights tonight."
   ];
 
   if (alsoWorthChecking.length > 0) {
     sections.push("");
     sections.push("## Also Worth Checking");
-    sections.push(alsoWorthChecking.map((event) => renderHighlight(event, alsoWorthWhyContext)).join("\n\n"));
+    sections.push(alsoWorthChecking.map((event) => renderHighlight(event, alsoWorthWhyContext, "alsoWorth")).join("\n\n"));
   }
 
   sections.push("");
@@ -1643,9 +1755,9 @@ export function generateEmailHtml(now: Date, rankedEvents: RankedEvent[]): strin
     `<p><strong>Subject:</strong> Live Music Scout — Tonight around Seattle/Bellevue</p>`,
     `<p><strong>Date:</strong> ${escapeHtml(formatTonightLong(now))}</p>`,
     "<h2>Tonight’s Highlights</h2>",
-    highlights.length > 0 ? highlights.map((event) => renderHighlightHtml(event, highlightsWhyContext)).join("") : "<p>No strong highlights tonight.</p>",
+    highlights.length > 0 ? highlights.map((event) => renderHighlightHtml(event, highlightsWhyContext, "highlight")).join("") : "<p>No strong highlights tonight.</p>",
     alsoWorthChecking.length > 0
-      ? `<h2>Also Worth Checking</h2>${alsoWorthChecking.map((event) => renderHighlightHtml(event, alsoWorthWhyContext)).join("")}`
+      ? `<h2>Also Worth Checking</h2>${alsoWorthChecking.map((event) => renderHighlightHtml(event, alsoWorthWhyContext, "alsoWorth")).join("")}`
       : "",
     "<h2>All Evaluated Shows</h2>",
     remaining.length > 0
@@ -1673,13 +1785,13 @@ export function generateWeeklyEmailPreview(
     `Date range: ${formatDateRangeLong(startKey, endKey)}`,
     "",
     "## This Week’s Highlights",
-    highlights.length > 0 ? highlights.map((group) => renderWeeklyHighlight(group, highlightsWhyContext)).join("\n\n") : "No strong highlights this week."
+    highlights.length > 0 ? highlights.map((group) => renderWeeklyHighlight(group, highlightsWhyContext, "highlight")).join("\n\n") : "No strong highlights this week."
   ];
 
   if (alsoWorthALook.length > 0) {
     sections.push("");
     sections.push("## Also Worth a Look");
-    sections.push(alsoWorthALook.map((group) => renderWeeklyHighlight(group, alsoWorthWhyContext)).join("\n\n"));
+    sections.push(alsoWorthALook.map((group) => renderWeeklyHighlight(group, alsoWorthWhyContext, "alsoWorth")).join("\n\n"));
   }
 
   if (includeEvaluatedShows) {
@@ -1710,9 +1822,9 @@ export function generateWeeklyEmailHtml(
     "<p><strong>Subject:</strong> Live Music Scout — This Week around Seattle/Bellevue</p>",
     `<p><strong>Date range:</strong> ${escapeHtml(formatDateRangeLong(startKey, endKey))}</p>`,
     "<h2>This Week’s Highlights</h2>",
-    highlights.length > 0 ? highlights.map((group) => renderWeeklyHighlightHtml(group, highlightsWhyContext, true)).join("") : "<p>No strong highlights this week.</p>",
+    highlights.length > 0 ? highlights.map((group) => renderWeeklyHighlightHtml(group, highlightsWhyContext, true, "highlight")).join("") : "<p>No strong highlights this week.</p>",
     alsoWorthALook.length > 0
-      ? `<h2>Also Worth a Look</h2>${alsoWorthALook.map((group) => renderWeeklyHighlightHtml(group, alsoWorthWhyContext, true)).join("")}`
+      ? `<h2>Also Worth a Look</h2>${alsoWorthALook.map((group) => renderWeeklyHighlightHtml(group, alsoWorthWhyContext, true, "alsoWorth")).join("")}`
       : "",
     includeEvaluatedShows ? renderWeeklyEvaluatedSectionsHtml(evaluatedByDay, highlightIds, alsoWorthALookIds) : "",
     "<p><em>Evaluated from the configured venue sources; not a complete citywide calendar.</em></p>",

@@ -58,6 +58,11 @@ function addVenueAwareScoring(blob: string, matchReasons: string[]): number {
     matchReasons.push("Chop Suey often surfaces Capitol Hill touring, local, and genre-club shows");
   }
 
+  if (blob.includes("showbox at the market") || blob.includes("showbox sodo")) {
+    score += 4;
+    matchReasons.push("Showbox is a high-signal Seattle rock and indie venue");
+  }
+
   if (blob.includes("conor byrne")) {
     score += 3;
     matchReasons.push("Conor Byrne often surfaces intimate Ballard folk, roots, songwriter, country, and local-band shows");
@@ -88,7 +93,55 @@ function hasAny(text: string, terms: string[]): boolean {
 
 const RELEASE_SHOW_TERMS = ["album release", "record release", "release show"];
 const BENEFIT_OR_FUNDRAISER_TERMS = ["benefit concert", "fundraiser", "benefit for"];
-const KNOWN_ACTS = ["spyro gyra"];
+const KNOWN_ACT_TIERS: Array<{ label: string; score: number; acts: string[] }> = [
+  {
+    label: "tier 1 personal-favorite known act signal",
+    score: 22,
+    acts: ["echo & the bunnymen"]
+  },
+  {
+    label: "tier 2 strong personal-fit known act signal",
+    score: 14,
+    acts: []
+  },
+  {
+    label: "tier 3 friend-shareable known act signal",
+    score: 8,
+    acts: ["spyro gyra"]
+  }
+];
+const PERSONAL_TASTE_SIGNALS: Array<{ label: string; score: number; terms: string[] }> = [
+  {
+    label: "top personal taste signal: alt rock / alternative rock",
+    score: 4,
+    terms: ["alt rock", "alternative rock"]
+  },
+  {
+    label: "top personal taste signal: 1980s punk/new wave",
+    score: 4,
+    terms: ["1980s punk", "80s punk", "new wave", "post-punk"]
+  },
+  {
+    label: "strong personal taste signal: rock",
+    score: 2,
+    terms: ["rock"]
+  },
+  {
+    label: "strong personal taste signal: Americana",
+    score: 2,
+    terms: ["americana"]
+  },
+  {
+    label: "moderate personal taste signal: classic rock",
+    score: 1,
+    terms: ["classic rock"]
+  },
+  {
+    label: "moderate personal taste signal: funk/R&B/reggae/dub",
+    score: 1,
+    terms: ["funk", "r&b", "rhythm and blues", "reggae", "dub"]
+  }
+];
 const SEATED_QUALITY_VENUES = ["dimitriou's jazz alley", "jazz alley", "the triple door", "bake's place"];
 const GENERIC_LATE_NIGHT_VENUES = ["seamonster lounge", "nectar lounge", "hidden hall", "chop suey"];
 const GENERIC_LATE_NIGHT_SCORE_CAP = 18;
@@ -123,8 +176,19 @@ const ARTIST_DETAIL_TERMS = [
   "plays the music"
 ];
 
-function getKnownActMatch(blob: string): string | undefined {
-  return KNOWN_ACTS.find((act) => blob.includes(act));
+function getKnownActMatch(blob: string): { act: string; label: string; score: number } | undefined {
+  for (const tier of KNOWN_ACT_TIERS) {
+    const act = tier.acts.find((candidate) => blob.includes(candidate));
+    if (act) {
+      return { act, label: tier.label, score: tier.score };
+    }
+  }
+
+  return undefined;
+}
+
+function getPersonalTasteMatches(blob: string): typeof PERSONAL_TASTE_SIGNALS {
+  return PERSONAL_TASTE_SIGNALS.filter((signal) => hasAny(blob, signal.terms));
 }
 
 function isSeatedQualityShow(blob: string): boolean {
@@ -159,7 +223,11 @@ function parseStartHour(time?: string): number | undefined {
   return hour === 12 ? 12 : hour + 12;
 }
 
-function hasStrongerArtistOrShowSignal(event: ClassifiedEvent, blob: string, knownActMatch?: string): boolean {
+function hasStrongerArtistOrShowSignal(
+  event: ClassifiedEvent,
+  blob: string,
+  knownActMatch?: { act: string; label: string; score: number }
+): boolean {
   const titleBlob = [event.title, event.artist].filter(Boolean).join(" ").toLowerCase();
 
   return Boolean(
@@ -177,7 +245,7 @@ function hasStrongerArtistOrShowSignal(event: ClassifiedEvent, blob: string, kno
 function isGenericLateNightVenueConfidencePick(
   event: ClassifiedEvent,
   blob: string,
-  knownActMatch?: string
+  knownActMatch?: { act: string; label: string; score: number }
 ): boolean {
   const hour = parseStartHour(event.time);
   if (hour === undefined || hour < 22) {
@@ -197,7 +265,11 @@ function isRecurringRegularShow(event: ClassifiedEvent): boolean {
   return RECURRING_REGULAR_SHOWS.some((show) => titleText.includes(show));
 }
 
-function hasSpecialEventSignal(event: ClassifiedEvent, blob: string, knownActMatch?: string): boolean {
+function hasSpecialEventSignal(
+  event: ClassifiedEvent,
+  blob: string,
+  knownActMatch?: { act: string; label: string; score: number }
+): boolean {
   const titleBlob = [event.title, event.artist].filter(Boolean).join(" ").toLowerCase();
 
   return Boolean(
@@ -235,8 +307,13 @@ export function rankEvents(
       score += addVenueAwareScoring(blob, matchReasons);
 
       if (knownActMatch) {
-        score += 8;
-        matchReasons.push(`known act signal: ${knownActMatch}`);
+        score += knownActMatch.score;
+        matchReasons.push(`${knownActMatch.label}: ${knownActMatch.act}`);
+      }
+
+      for (const tasteSignal of getPersonalTasteMatches(blob)) {
+        score += tasteSignal.score;
+        matchReasons.push(tasteSignal.label);
       }
 
       if (isSeatedQualityShow(blob)) {
