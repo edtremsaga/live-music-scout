@@ -293,6 +293,8 @@ function cleanDisplayTitle(value: string | undefined): string {
   return publicText(value)
     .replace(/^[\s🎸🌙⭐✨🔥🎤🎵🎶•·\-–—:|]+/u, "")
     .replace(/[\s🎸🌙⭐✨🔥🎤🎵🎶•·\-–—:|]+$/u, "")
+    .replace(/\s*[🎸🌙⭐✨🔥🎤🎵🎶]\s*([:;,.!?|)\]\-–—])/gu, "$1")
+    .replace(/([:;,.!?|([\-–—])\s*[🎸🌙⭐✨🔥🎤🎵🎶]\s*/gu, "$1 ")
     .replace(/\s+/g, " ")
     .trim();
 }

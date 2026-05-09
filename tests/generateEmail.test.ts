@@ -938,6 +938,44 @@ test("weekly preview groups Sunset album-release night runs but keeps nightly ev
   assert.match(output, /### Saturday, May 2[\s\S]*Zookraught, Black Ends, LOOLOWNINGEN & THE FAR EAST IDIOTS[\s\S]*Highlighted above\./);
 });
 
+test("weekly display titles remove decorative standalone emojis near punctuation", () => {
+  const luckyTown = makeRankedEvent({
+    id: "luckytown",
+    title: "🎸 LuckyTown: A High-Octane Tribute to The Boss 🎸",
+    artist: "🎸 LuckyTown: A High-Octane Tribute to The Boss 🎸",
+    venue: "Bake's Place",
+    sourceName: "Bake's Place",
+    url: "https://bakesplacebellevue.com/luckytown",
+    date: "2026-05-09",
+    score: 30,
+    verdict: "Go"
+  });
+  const takenByTheSky = makeRankedEvent({
+    id: "taken-by-the-sky",
+    title: "🌙 Taken By The Sky: A Fleetwood Mac Experience 🌙: Two Shows",
+    artist: "🌙 Taken By The Sky: A Fleetwood Mac Experience 🌙: Two Shows",
+    venue: "The Triple Door",
+    sourceName: "The Triple Door",
+    url: "https://thetripledoor.net/taken-by-the-sky",
+    date: "2026-05-10",
+    score: 29,
+    verdict: "Go"
+  });
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-05-09T12:00:00-07:00"),
+    [luckyTown, takenByTheSky],
+    "2026-05-09",
+    "2026-05-16",
+    { includeEvaluatedShows: false }
+  );
+
+  assert.match(output, /### LuckyTown: A High-Octane Tribute to The Boss/);
+  assert.match(output, /### Taken By The Sky: A Fleetwood Mac Experience: Two Shows/);
+  assert.doesNotMatch(output, /### .*🎸/);
+  assert.doesNotMatch(output, /### .*🌙/);
+});
+
 test("weekly preview caps highlights and adds also worth a look", () => {
   const events = Array.from({ length: 8 }, (_, index) => makeRankedEvent({
     id: `weekly-pick-${index + 1}`,
