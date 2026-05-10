@@ -73,6 +73,9 @@ Default to conserving Codex usage for this project.
 - Avoid spending Codex time re-reviewing normal daily or weekly verify reports when they have `Warnings: 0`, no failed sources, and the top-section items look plausible.
 - When the user pastes a routine report, summarize only material issues, anomalies, or recommended next actions. If nothing looks wrong, say so briefly.
 - For routine checks, encourage the user to run local commands and paste only failures or suspicious output.
+- Treat `data/seen-events.json` as mutable runtime state. If preview or verification commands change it, restore it unless the task explicitly says to update seen-event state.
+- For ranking tasks, report before/after score and placement for named examples.
+- For email, copy, or thumbnail tasks, report before/after examples.
 - When asked to commit parser or quality work, stage only relevant files, leave `data/seen-events.json` unstaged unless explicitly requested, commit with a focused message, and push only if the user asks for push.
 - Do not run preview or verification commands repeatedly unless a code change needs rechecking or the user explicitly requests another run.
 
