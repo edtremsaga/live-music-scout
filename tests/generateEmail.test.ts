@@ -986,6 +986,30 @@ test("weekly display titles remove decorative standalone emojis near punctuation
   assert.doesNotMatch(output, /### .*🌙/);
 });
 
+test("weekly evaluated show titles decode hex HTML apostrophe entities", () => {
+  const event = makeRankedEvent({
+    id: "mikes-emo-band",
+    title: "Mike&#x27;s Emo Band, Less Than Three, Pink-182",
+    artist: "Mike&#x27;s Emo Band, Less Than Three, Pink-182",
+    venue: "The Funhouse",
+    sourceName: "El Corazon",
+    url: "https://www.elcorazonseattle.com/shows/mikes-emo-band",
+    date: "2026-05-12",
+    score: 4,
+    verdict: "Maybe"
+  });
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-05-10T12:00:00-07:00"),
+    [event],
+    "2026-05-10",
+    "2026-05-17"
+  );
+
+  assert.match(output, /Mike's Emo Band, Less Than Three, Pink-182/);
+  assert.doesNotMatch(output, /Mike&#x27;s Emo Band/);
+});
+
 test("weekly preview caps highlights and adds also worth a look", () => {
   const events = Array.from({ length: 8 }, (_, index) => makeRankedEvent({
     id: `weekly-pick-${index + 1}`,

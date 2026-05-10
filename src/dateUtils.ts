@@ -83,6 +83,7 @@ export function decodeHtmlEntities(input: string): string {
     .replace(/&#038;/g, "&")
     .replace(/&amp;/g, "&")
     .replace(/&quot;/g, "\"")
+    .replace(/&#x27;/gi, "'")
     .replace(/&#39;/g, "'")
     .replace(/&apos;/g, "'")
     .replace(/&nbsp;/g, " ")
