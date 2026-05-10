@@ -2,7 +2,7 @@ import { printScoutResult, runScout } from "./runScout.js";
 
 async function main(): Promise<void> {
   const includeEvaluatedShows = process.argv.includes("--full");
-  const result = await runScout({ reportKind: "week", includeEvaluatedShows });
+  const result = await runScout({ reportKind: "week", includeEvaluatedShows, updateSeen: false });
   printScoutResult(result);
 }
 
