@@ -198,6 +198,15 @@ export function getSourceLinkLabel(event: Pick<RankedEvent, "url" | "sourceName"
     return "STG event page";
   }
 
+  if (
+    event.sourceName === "Showbox Presents"
+    || event.venue === "Showbox SoDo"
+    || event.venue === "Showbox at the Market"
+    || url.includes("showboxpresents.com")
+  ) {
+    return "Showbox Presents event page";
+  }
+
   return "Event page";
 }
 

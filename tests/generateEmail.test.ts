@@ -56,6 +56,16 @@ test("STG URL gets STG event page label", () => {
   assert.equal(getSourceLinkLabel(event), "STG event page");
 });
 
+test("Showbox Presents URL gets Showbox event page label", () => {
+  const event = makeRankedEvent({
+    sourceName: "Showbox Presents",
+    venue: "Showbox SoDo",
+    url: "https://www.showboxpresents.com/events/detail/1183923"
+  });
+
+  assert.equal(getSourceLinkLabel(event), "Showbox Presents event page");
+});
+
 test("Jazz Alley URL gets Jazz Alley event page label", () => {
   const event = makeRankedEvent({
     sourceName: "Dimitriou's Jazz Alley",
