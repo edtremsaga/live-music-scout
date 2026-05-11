@@ -55,6 +55,7 @@ export function parseRoyalRoom(html: string, context: ParserContext): ParserResu
     }
 
     candidateCount += 1;
+    const ticketPriceText = tail?.trim().toLowerCase() === "free" ? "Free" : undefined;
     const basisParts = [
       "Parsed from The Royal Room events listing",
       "venue fit suggests jazz, soul, funk, strong local musicianship, and a more comfortable seated setup",
@@ -72,6 +73,7 @@ export function parseRoyalRoom(html: string, context: ParserContext): ParserResu
       url: anchor.url,
       sourceName: context.source.name,
       genreHints: ["local musicianship", "comfortable room"],
+      ticketPriceText,
       confidence: tail?.toLowerCase().includes("free") ? "Medium" : "High",
       basis: basisParts.join("; ")
     });
