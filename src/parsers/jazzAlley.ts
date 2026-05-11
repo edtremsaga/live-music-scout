@@ -149,6 +149,12 @@ export function extractJazzAlleyPerformanceMap(
   return performanceMap;
 }
 
+export function extractJazzAlleyTicketPriceText(html: string): string | undefined {
+  const detailText = normalizeWhitespace(stripHtml(html));
+  const priceMatch = detailText.match(/\$\d+(?:\.\d{2})?\s+Includes\s+a\s+\$\d+(?:\.\d{2})?\s+Handling\s+Fee/i);
+  return priceMatch ? normalizeWhitespace(priceMatch[0]) : undefined;
+}
+
 function collectGenreHints(title: string, description?: string): string[] {
   const blob = `${title} ${description ?? ""}`.toLowerCase();
   const hints = new Set<string>(["jazz", "seated venue", "local musicianship"]);
@@ -205,11 +211,13 @@ export async function parseJazzAlley(html: string, context: ParserContext): Prom
 
     candidateCount += 1;
     let performanceMap = new Map<string, string[]>();
+    let ticketPriceText: string | undefined;
     let usedDetailSchedule = false;
 
     try {
       const detailHtml = await fetchPage(entry.url);
       performanceMap = extractJazzAlleyPerformanceMap(detailHtml, context.now, context.timezone);
+      ticketPriceText = extractJazzAlleyTicketPriceText(detailHtml);
       usedDetailSchedule = performanceMap.size > 0;
     } catch {
       detailFailures += 1;
@@ -238,6 +246,7 @@ export async function parseJazzAlley(html: string, context: ParserContext): Prom
         sourceName: context.source.name,
         genreHints: collectGenreHints(entry.title, entry.description),
         description: entry.description,
+        ticketPriceText,
         imageUrl: entry.imageUrl,
         imageAlt: entry.imageUrl ? `${entry.title} event image` : undefined,
         confidence: usedDetailSchedule ? "High" : "Medium",

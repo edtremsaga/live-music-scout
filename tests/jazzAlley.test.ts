@@ -1,7 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { extractJazzAlleyCalendarEntries, extractJazzAlleyPerformanceMap, parseJazzAlleyDateRange } from "../src/parsers/jazzAlley.js";
+import {
+  extractJazzAlleyCalendarEntries,
+  extractJazzAlleyPerformanceMap,
+  extractJazzAlleyTicketPriceText,
+  parseJazzAlleyDateRange
+} from "../src/parsers/jazzAlley.js";
 
 test("Jazz Alley calendar entries include normalized image URLs", () => {
   const html = `
@@ -53,4 +58,30 @@ test("Jazz Alley performance map groups same-day set times without changing date
 
   assert.deepEqual(performanceMap.get("2026-05-01"), ["7:30 PM"]);
   assert.deepEqual(performanceMap.get("2026-05-02"), ["7:30 PM", "9:30 PM"]);
+});
+
+test("Jazz Alley ticket price text reads public detail page price and fee text", () => {
+  const html = `
+    <div class="artist-details">
+      <h1>Vincent Ingala</h1>
+      <p>Dinner and a show.</p>
+      <p>$43.00 Includes a $12.50 Handling Fee</p>
+    </div>
+  `;
+
+  assert.equal(
+    extractJazzAlleyTicketPriceText(html),
+    "$43.00 Includes a $12.50 Handling Fee"
+  );
+});
+
+test("Jazz Alley ticket price text is omitted when no clear price is listed", () => {
+  const html = `
+    <div class="artist-details">
+      <h1>Vincent Ingala</h1>
+      <p>Choose a performance and join us for dinner.</p>
+    </div>
+  `;
+
+  assert.equal(extractJazzAlleyTicketPriceText(html), undefined);
 });
