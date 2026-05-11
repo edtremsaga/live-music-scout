@@ -16,6 +16,7 @@ type TripleDoorListing = {
   time?: string;
   location: string;
   description?: string;
+  ticketPriceText?: string;
 };
 
 function makeId(input: string): string {
@@ -99,6 +100,27 @@ function isClearlySkippedTripleDoorEvent(title: string, location: string, descri
   return false;
 }
 
+function extractTicketPriceText(block: string): string | undefined {
+  const getTicketsMatch = block.match(/<a\b[^>]*>\s*Get\s+tickets\s*<\/a>/i);
+  if (!getTicketsMatch?.index) {
+    return undefined;
+  }
+
+  const beforeTickets = block.slice(0, getTicketsMatch.index);
+  const notesMatch = beforeTickets.match(/<div class="event-info event-notes">[\s\S]*?<\/div>/i);
+  const priceRegion = notesMatch?.index === undefined
+    ? beforeTickets
+    : beforeTickets.slice(notesMatch.index + notesMatch[0].length);
+  const text = normalizeWhitespace(stripHtml(priceRegion));
+
+  if (!text || /\b(?:menu|drink|drinks|happy hour|snacks?)\b/i.test(text)) {
+    return undefined;
+  }
+
+  const match = text.match(/^\s*(\$\d+(?:\.\d{2})?(?:\s*(?:-|–|\/)\s*\$\d+(?:\.\d{2})?)?)\s*$/);
+  return match ? normalizeWhitespace(match[1].replace("–", "-")) : undefined;
+}
+
 export function extractTripleDoorListings(html: string): TripleDoorListing[] {
   const blocks = html.matchAll(/<div class="event-detail"[\s\S]*?<\/article>/gi);
   const listings: TripleDoorListing[] = [];
@@ -121,6 +143,7 @@ export function extractTripleDoorListings(html: string): TripleDoorListing[] {
     const dateText = normalizeWhitespace(stripHtml(dateMatch[1]));
     const time = dateMatch[2] ? extractTime(normalizeWhitespace(stripHtml(dateMatch[2]))) : undefined;
     const description = descriptionMatch ? normalizeWhitespace(stripHtml(descriptionMatch[1])) : undefined;
+    const ticketPriceText = extractTicketPriceText(block);
 
     if (!title || !dateText || !location) {
       continue;
@@ -132,7 +155,8 @@ export function extractTripleDoorListings(html: string): TripleDoorListing[] {
       dateText,
       time,
       location,
-      description
+      description,
+      ticketPriceText
     });
   }
 
@@ -211,6 +235,7 @@ export async function parseTripleDoor(html: string, context: ParserContext): Pro
         sourceName: context.source.name,
         genreHints: collectGenreHints(listing.title, listing.description),
         description: listing.description,
+        ticketPriceText: listing.ticketPriceText,
         confidence: "High",
         basis: normalizeWhitespace([
           "Parsed from The Triple Door mainstage upcoming listings",
