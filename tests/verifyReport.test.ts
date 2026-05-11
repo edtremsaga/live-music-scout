@@ -213,6 +213,7 @@ test("verification email uses readable email-style text sections", () => {
   assert.match(report.text, /- Source health: The Royal Room fetched, High confidence/);
   assert.match(report.text, /- Recommendation: Go/);
   assert.match(report.text, /- Internal score: 12/);
+  assert.doesNotMatch(report.text, /- Tickets:/);
 });
 
 test("verification email includes matching html report", () => {
@@ -226,6 +227,73 @@ test("verification email includes matching html report", () => {
   assert.match(report.html, /<strong>Status:<\/strong> OK/);
   assert.match(report.html, /<strong>Tier note:<\/strong> Top curated section\./);
   assert.match(report.html, /<strong>Recommendation:<\/strong> Go/);
+  assert.doesNotMatch(report.html, /<strong>Tickets:<\/strong>/);
+});
+
+test("verification email includes ticket price text before link when present", () => {
+  const report = generatePreSendVerificationEmail(makeScoutRunResult({
+    rankedEvents: [
+      makeRankedEvent({
+        sourceName: "Tractor Tavern",
+        venue: "Tractor Tavern",
+        url: "https://www.ticketweb.com/event/example",
+        ticketPriceText: "$38.47"
+      })
+    ],
+    statuses: [
+      {
+        sourceName: "Tractor Tavern",
+        parserName: "tractor",
+        ok: true,
+        fetchStatus: "fetched",
+        message: "fixture",
+        candidateCount: 1,
+        matchedCount: 1,
+        matchedLabel: "tonight",
+        parserConfidence: "High"
+      }
+    ]
+  }));
+
+  assert.match(report.text, /- Tickets: \$38\.47\n- Link: https:\/\/www\.ticketweb\.com\/event\/example/);
+  assert.match(
+    report.html,
+    /<li><strong>Tickets:<\/strong> \$38\.47<\/li><li><strong>Link:<\/strong> <a href="https:\/\/www\.ticketweb\.com\/event\/example">https:\/\/www\.ticketweb\.com\/event\/example<\/a><\/li>/
+  );
+});
+
+test("weekly verification email includes grouped representative ticket price text", () => {
+  const report = generatePreSendVerificationEmail(makeScoutRunResult({
+    reportKind: "week",
+    rankedEvents: [
+      makeRankedEvent({
+        sourceName: "Tractor Tavern",
+        venue: "Tractor Tavern",
+        date: "2026-04-30",
+        url: "https://www.ticketweb.com/event/example",
+        ticketPriceText: "$21.99",
+        score: 20
+      })
+    ],
+    statuses: [
+      {
+        sourceName: "Tractor Tavern",
+        parserName: "tractor",
+        ok: true,
+        fetchStatus: "fetched",
+        message: "fixture",
+        candidateCount: 1,
+        matchedCount: 1,
+        matchedLabel: "in range",
+        parserConfidence: "High"
+      }
+    ],
+    startKey: "2026-04-29",
+    endKey: "2026-05-06"
+  }));
+
+  assert.match(report.text, /## This Week's Highlights/);
+  assert.match(report.text, /- Tickets: \$21\.99\n- Link: https:\/\/www\.ticketweb\.com\/event\/example/);
 });
 
 test("verification email reports tracked sources that are not feeding emails", () => {

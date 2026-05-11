@@ -12,6 +12,7 @@ type VerificationItem = {
   times: string[];
   location?: string;
   url: string;
+  ticketPriceText?: string;
   sourceName: string;
   verdict: RankedEvent["verdict"];
   score: number;
@@ -126,6 +127,7 @@ function makeItem(section: string, event: RankedEvent, statuses: SourceRunStatus
     times: [event.time].filter(Boolean) as string[],
     location: event.location,
     url: event.url,
+    ticketPriceText: publicText(event.ticketPriceText) || undefined,
     sourceName: event.sourceName,
     verdict: event.verdict,
     score: event.score,
@@ -151,6 +153,7 @@ function makeGroupItem(section: string, group: WeeklyHighlightGroup, statuses: S
     times: unique(group.events.flatMap((event) => (event.time ?? "").split("/"))),
     location: representative.location,
     url: representative.url,
+    ticketPriceText: publicText(representative.ticketPriceText) || undefined,
     sourceName: representative.sourceName,
     verdict: representative.verdict,
     score: representative.score,
@@ -472,6 +475,9 @@ export function generatePreSendVerificationReport(result: ScoutRunResult): strin
     lines.push(`- Classification: ${item.classification.eventType}, ${item.classification.musicConfidence} confidence`);
     lines.push(`- Recommendation: ${item.verdict}`);
     lines.push(`- Internal score: ${item.score}`);
+    if (item.ticketPriceText) {
+      lines.push(`- Tickets: ${item.ticketPriceText}`);
+    }
     lines.push(`- Link: ${item.url}`);
 
     if (item.warnings.length > 0) {
@@ -516,6 +522,9 @@ export function generatePreSendVerificationHtml(result: ScoutRunResult): string 
       `<li><strong>Classification:</strong> ${escapeHtml(`${item.classification.eventType}, ${item.classification.musicConfidence} confidence`)}</li>`,
       `<li><strong>Recommendation:</strong> ${escapeHtml(item.verdict)}</li>`,
       `<li><strong>Internal score:</strong> ${item.score}</li>`,
+      item.ticketPriceText
+        ? `<li><strong>Tickets:</strong> ${escapeHtml(item.ticketPriceText)}</li>`
+        : "",
       `<li><strong>Link:</strong> <a href="${escapeHtml(item.url)}">${escapeHtml(item.url)}</a></li>`,
       item.warnings.length > 0
         ? `<li><strong>Warnings:</strong> ${escapeHtml(item.warnings.join("; "))}</li>`
