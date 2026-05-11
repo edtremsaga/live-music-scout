@@ -29,9 +29,17 @@ type VerificationReportModel = {
   items: VerificationItem[];
   warningCount: number;
   sourceSummary: string[];
+  ticketPriceCoverage: TicketPriceCoverageSummary;
   coverageSummary: string[];
   coverageGapSections: CoverageGapSection[];
   noteLines: string[];
+};
+
+type TicketPriceCoverageSummary = {
+  withTicketText: number;
+  total: number;
+  withByVenue: Array<[string, number]>;
+  withoutByVenue: Array<[string, number]>;
 };
 
 type CoverageGap = {
@@ -207,6 +215,36 @@ function formatSourceSummary(statuses: SourceRunStatus[]): string[] {
   }
 
   return lines;
+}
+
+function incrementCount(map: Map<string, number>, key: string): void {
+  map.set(key, (map.get(key) ?? 0) + 1);
+}
+
+function formatCountMap(map: Map<string, number>): Array<[string, number]> {
+  return Array.from(map.entries()).sort(([left], [right]) => left.localeCompare(right));
+}
+
+function buildTicketPriceCoverage(items: VerificationItem[]): TicketPriceCoverageSummary {
+  const withByVenue = new Map<string, number>();
+  const withoutByVenue = new Map<string, number>();
+
+  for (const item of items) {
+    const key = item.venue || item.sourceName;
+
+    if (item.ticketPriceText) {
+      incrementCount(withByVenue, key);
+    } else {
+      incrementCount(withoutByVenue, key);
+    }
+  }
+
+  return {
+    withTicketText: Array.from(withByVenue.values()).reduce((sum, count) => sum + count, 0),
+    total: items.length,
+    withByVenue: formatCountMap(withByVenue),
+    withoutByVenue: formatCountMap(withoutByVenue)
+  };
 }
 
 function summarizeSourceNote(source: SourceConfig): string | undefined {
@@ -404,6 +442,7 @@ function buildVerificationReportModel(result: ScoutRunResult): VerificationRepor
     items,
     warningCount,
     sourceSummary: formatSourceSummary(result.statuses),
+    ticketPriceCoverage: buildTicketPriceCoverage(items),
     coverageSummary: formatCoverageSummary(result, coverageGapSections),
     coverageGapSections,
     noteLines: [
@@ -427,6 +466,17 @@ export function generatePreSendVerificationReport(result: ScoutRunResult): strin
     "",
     "## Source Health",
     ...report.sourceSummary.map((line) => `- ${line}`),
+    "",
+    "## Ticket Price Coverage",
+    `- Items with ticket text: ${report.ticketPriceCoverage.withTicketText} / ${report.ticketPriceCoverage.total}`,
+    "- With ticket text:",
+    ...(report.ticketPriceCoverage.withByVenue.length > 0
+      ? report.ticketPriceCoverage.withByVenue.map(([venue, count]) => `  - ${venue}: ${count}`)
+      : ["  - None"]),
+    "- Without ticket text:",
+    ...(report.ticketPriceCoverage.withoutByVenue.length > 0
+      ? report.ticketPriceCoverage.withoutByVenue.map(([venue, count]) => `  - ${venue}: ${count}`)
+      : ["  - None"]),
     "",
     "## Coverage Gaps"
   ];
@@ -546,6 +596,12 @@ export function generatePreSendVerificationHtml(result: ScoutRunResult): string 
     "</ul>",
     "<h2>Source Health</h2>",
     `<ul>${report.sourceSummary.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`,
+    "<h2>Ticket Price Coverage</h2>",
+    "<ul>",
+    `<li><strong>Items with ticket text:</strong> ${report.ticketPriceCoverage.withTicketText} / ${report.ticketPriceCoverage.total}</li>`,
+    `<li><strong>With ticket text:</strong>${report.ticketPriceCoverage.withByVenue.length > 0 ? `<ul>${report.ticketPriceCoverage.withByVenue.map(([venue, count]) => `<li>${escapeHtml(venue)}: ${count}</li>`).join("")}</ul>` : " None"}</li>`,
+    `<li><strong>Without ticket text:</strong>${report.ticketPriceCoverage.withoutByVenue.length > 0 ? `<ul>${report.ticketPriceCoverage.withoutByVenue.map(([venue, count]) => `<li>${escapeHtml(venue)}: ${count}</li>`).join("")}</ul>` : " None"}</li>`,
+    "</ul>",
     "<h2>Coverage Gaps</h2>",
     report.coverageGapSections.length === 0
       ? "<p>No configured coverage gaps found.</p>"

@@ -221,6 +221,7 @@ test("verification email includes matching html report", () => {
 
   assert.match(report.html, /<h2>Summary<\/h2>/);
   assert.match(report.html, /<h2>Source Health<\/h2>/);
+  assert.match(report.html, /<h2>Ticket Price Coverage<\/h2>/);
   assert.match(report.html, /<h2>Coverage Gaps<\/h2>/);
   assert.match(report.html, /<h2>Tonight&#39;s Highlights<\/h2>/);
   assert.match(report.html, /<h3>Sample Trio<\/h3>/);
@@ -228,6 +229,59 @@ test("verification email includes matching html report", () => {
   assert.match(report.html, /<strong>Tier note:<\/strong> Top curated section\./);
   assert.match(report.html, /<strong>Recommendation:<\/strong> Go/);
   assert.doesNotMatch(report.html, /<strong>Tickets:<\/strong>/);
+});
+
+test("verification email summarizes ticket price coverage for mixed items", () => {
+  const report = generatePreSendVerificationEmail(makeScoutRunResult({
+    rankedEvents: [
+      makeRankedEvent({
+        id: "tractor-one",
+        title: "Tractor One",
+        artist: "Tractor One",
+        venue: "Tractor Tavern",
+        sourceName: "Tractor Tavern",
+        url: "https://www.ticketweb.com/event/tractor-one",
+        ticketPriceText: "$38.47",
+        score: 30
+      }),
+      makeRankedEvent({
+        id: "tractor-two",
+        title: "Tractor Two",
+        artist: "Tractor Two",
+        venue: "Tractor Tavern",
+        sourceName: "Tractor Tavern",
+        url: "https://www.ticketweb.com/event/tractor-two",
+        ticketPriceText: "$21.99",
+        score: 29
+      }),
+      makeRankedEvent({
+        id: "showbox",
+        title: "Showbox Event",
+        artist: "Showbox Event",
+        venue: "Showbox SoDo",
+        sourceName: "Showbox Presents",
+        url: "https://www.showboxpresents.com/events/detail/1",
+        score: 28
+      }),
+      makeRankedEvent({
+        id: "seamonster",
+        title: "SeaMonster Event",
+        artist: "SeaMonster Event",
+        venue: "SeaMonster Lounge",
+        sourceName: "SeaMonster Lounge",
+        url: "https://www.seamonsterlounge.com/event-info/test",
+        score: 27
+      })
+    ]
+  }));
+
+  assert.match(report.text, /## Ticket Price Coverage/);
+  assert.match(report.text, /- Items with ticket text: 2 \/ 4/);
+  assert.match(report.text, /- With ticket text:\n  - Tractor Tavern: 2/);
+  assert.match(report.text, /- Without ticket text:\n  - SeaMonster Lounge: 1\n  - Showbox SoDo: 1/);
+  assert.match(report.html, /<strong>Items with ticket text:<\/strong> 2 \/ 4/);
+  assert.match(report.html, /<li>Tractor Tavern: 2<\/li>/);
+  assert.match(report.html, /<li>SeaMonster Lounge: 1<\/li><li>Showbox SoDo: 1<\/li>/);
 });
 
 test("verification email includes ticket price text before link when present", () => {
