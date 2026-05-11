@@ -38,6 +38,7 @@ type SeaMonsterListing = {
   time?: string;
   location: string;
   description?: string;
+  ticketPriceText?: string;
   url: string;
   status?: number;
   imageUrl?: string;
@@ -123,6 +124,49 @@ function buildEventUrl(event: WixEvent, sourceUrl: string): string {
   }
 
   return new URL(`/event-info/${slug}`, sourceUrl).toString();
+}
+
+function extractTicketPriceText(description?: string): string | undefined {
+  const text = normalizeWhitespace(description ?? "");
+  if (!text) {
+    return undefined;
+  }
+
+  const chunks = text
+    .split(/(?:[.;]|\n|\r)+/)
+    .map((chunk) => cleanDisplayText(chunk))
+    .filter(Boolean);
+  const matches: string[] = [];
+  const seen = new Set<string>();
+
+  for (const chunk of chunks) {
+    const lower = chunk.toLowerCase();
+    const hasDollarAmount = /\$\s*\d+(?:\.\d{2})?(?:\s*(?:-|–|to)\s*\$\s*\d+(?:\.\d{2})?)?/.test(chunk);
+    const hasAdmissionTerm = /\b(?:admission|at the door|charge|cover|door cover|entry|show|ticket|tickets)\b/i.test(chunk);
+    const hasDonationSignal =
+      /\b(?:suggested donation|donations? welcome[ds]?|donations? accepted|donations? at the door)\b/i.test(chunk);
+    const hasFreeOrNoCover = /\b(?:free show|free admission|no cover)\b/i.test(chunk);
+    const isShortPriceOnly = hasDollarAmount && chunk.length <= 12 && /^\$/.test(chunk);
+    const isLikelyMerchFoodOrDrink = /\b(?:beer|cocktail|drink|drinks|food|meal|merch|merchandise|shirt|vinyl)\b/i.test(chunk);
+    const isLikelyFundraiserOnly = /\b(?:benefit|fundraiser|fundraising)\b/i.test(chunk) && !hasAdmissionTerm;
+    const isFreeGenrePhrase = /\bfree\s+(?:jazz|improv|improvisation|funk|soul|rock)\b/i.test(lower);
+
+    if (isLikelyFundraiserOnly || isFreeGenrePhrase || (isLikelyMerchFoodOrDrink && !hasAdmissionTerm)) {
+      continue;
+    }
+
+    if (!(hasFreeOrNoCover || hasDonationSignal || (hasDollarAmount && hasAdmissionTerm) || isShortPriceOnly)) {
+      continue;
+    }
+
+    const key = lower;
+    if (!seen.has(key)) {
+      matches.push(chunk);
+      seen.add(key);
+    }
+  }
+
+  return matches.length > 0 ? matches.join("; ") : undefined;
 }
 
 function collectGenreHints(event: WixEvent): string[] {
@@ -215,6 +259,7 @@ function normalizeWixEvent(event: WixEvent, context: ParserContext): SeaMonsterL
     time: cleanDisplayText(event.scheduling?.startTimeFormatted) || undefined,
     location,
     description: description || undefined,
+    ticketPriceText: extractTicketPriceText(description),
     url,
     status: event.status,
     imageUrl: findPublicImageUrl(event, context.source.url)
@@ -269,6 +314,7 @@ export function parseSeaMonster(html: string, context: ParserContext): ParserRes
       description: listing.description
     }),
     description: listing.description,
+    ticketPriceText: listing.ticketPriceText,
     imageUrl: listing.imageUrl,
     imageAlt: listing.imageUrl ? `${listing.title} event image` : undefined,
     confidence: "High",

@@ -36,7 +36,7 @@ function makeFixtureHtml(): string {
                 mainImage: {
                   url: "https://static.wixstatic.com/media/suffering-yuckheads.jpg"
                 },
-                description: "Seattle’s oddball organ/drum duo mixes punk rock sensibility with improvisational tactics.",
+                description: "Seattle’s oddball organ/drum duo mixes punk rock sensibility with improvisational tactics. $15 cover at the door.",
                 location: {
                   name: "Sea Monster Lounge",
                   address: "2202 N 45th St, Seattle, WA 98103, USA"
@@ -54,7 +54,7 @@ function makeFixtureHtml(): string {
                 id: "97ebbc11-76d2-4e60-ac6c-14f33d1147ae",
                 title: "Super Krewe",
                 slug: "super-krewe-4",
-                description: "Seattle brass ensemble fusing NOLA street-band tradition with originals and curated classics.",
+                description: "Seattle brass ensemble fusing NOLA street-band tradition with originals and curated classics. Free show. No cover; donations welcomed.",
                 location: {
                   fullAddress: {
                     formattedAddress: "2202 N 45th St, Seattle, WA 98103, USA"
@@ -67,6 +67,26 @@ function makeFixtureHtml(): string {
                     timeZoneId: "America/Los_Angeles"
                   },
                   startTimeFormatted: "10:00 PM"
+                }
+              },
+              {
+                id: "19e74478-6c22-40b0-b3f3-02ce0eb472d4",
+                title: "Free Jazz Workshop",
+                slug: "free-jazz-workshop",
+                description:
+                  "Exploratory free jazz and improvisation with vinyl available for $20 after the set. Benefit show raising money for local music education.",
+                location: {
+                  fullAddress: {
+                    formattedAddress: "2202 N 45th St, Seattle, WA 98103, USA"
+                  }
+                },
+                scheduling: {
+                  config: {
+                    startDate: "2026-05-01T02:30:00.000Z",
+                    endDate: "2026-05-01T04:00:00.000Z",
+                    timeZoneId: "America/Los_Angeles"
+                  },
+                  startTimeFormatted: "7:30 PM"
                 }
               }
             ]
@@ -88,7 +108,7 @@ function makeFixtureHtml(): string {
 test("extractSeaMonsterListings reads official public Wix Events warmup data", () => {
   const listings = extractSeaMonsterListings(makeFixtureHtml(), CONTEXT);
 
-  assert.equal(listings.length, 2);
+  assert.equal(listings.length, 3);
   assert.equal(listings[0].title, "Suffering Yuckheads");
   assert.equal(listings[0].date, "2026-04-29");
   assert.equal(listings[0].time, "7:30 PM");
@@ -99,13 +119,16 @@ test("extractSeaMonsterListings reads official public Wix Events warmup data", (
   );
   assert.equal(listings[0].imageUrl, "https://static.wixstatic.com/media/suffering-yuckheads.jpg");
   assert.match(listings[0].description ?? "", /organ\/drum duo/);
+  assert.equal(listings[0].ticketPriceText, "$15 cover at the door");
+  assert.equal(listings[1].ticketPriceText, "Free show; No cover; donations welcomed");
+  assert.equal(listings[2].ticketPriceText, undefined);
 });
 
 test("parseSeaMonster normalizes public SeaMonster listings into scout events", () => {
   const result = parseSeaMonster(makeFixtureHtml(), CONTEXT);
 
-  assert.equal(result.events.length, 2);
-  assert.equal(result.candidateCount, 2);
+  assert.equal(result.events.length, 3);
+  assert.equal(result.candidateCount, 3);
   assert.equal(result.parserConfidence, "High");
   assert.match(result.statusMessage, /official public Wix Events listings/);
   assert.equal(result.events[1].title, "Super Krewe");
@@ -117,4 +140,7 @@ test("parseSeaMonster normalizes public SeaMonster listings into scout events", 
   assert.equal(result.events[1].genreHints.includes("brass"), true);
   assert.match(result.events[1].basis, /official public Wix Events listings/);
   assert.equal(result.events[0].imageUrl, "https://static.wixstatic.com/media/suffering-yuckheads.jpg");
+  assert.equal(result.events[0].ticketPriceText, "$15 cover at the door");
+  assert.equal(result.events[1].ticketPriceText, "Free show; No cover; donations welcomed");
+  assert.equal(result.events[2].ticketPriceText, undefined);
 });
