@@ -12,6 +12,7 @@ type BakesPlaceListing = {
   startDateKey: string;
   timeText?: string;
   description?: string;
+  ticketPriceText?: string;
   url: string;
   imageUrl?: string;
 };
@@ -43,6 +44,18 @@ function extractEventImageUrl(block: string, baseUrl: string): string | undefine
   const imageTag = block.match(/<img\b[^>]*class=(["'])[^"']*\bevent-image\b[^"']*\1[^>]*>/i)?.[0];
   const src = imageTag?.match(/\bsrc=(["'])(.*?)\1/i)?.[2];
   return normalizePublicImageUrl(src, baseUrl);
+}
+
+function extractTicketPriceText(blockText: string): string | undefined {
+  const pricePhrases = normalizeWhitespace(blockText)
+    .split(/(?:[.;]|\s+-\s+|\s+\|\s+)/)
+    .map((phrase) => normalizeWhitespace(phrase))
+    .filter((phrase) =>
+      /\$\s*\d/i.test(phrase)
+      && /\b(ticket|cover|admission|music charge|food\s*&\s*beverage minimum|food and beverage minimum|minimum|charge)\b/i.test(phrase)
+    );
+
+  return pricePhrases.length > 0 ? pricePhrases.join("; ") : undefined;
 }
 
 function collectGenreHints(title: string, description?: string): string[] {
@@ -109,6 +122,7 @@ export function extractBakesPlaceListings(html: string, sourceUrl: string): Bake
     const startDateKey = formatDateKeyFromStart(normalizeWhitespace(startMatch[1]));
     const description = descriptionMatch ? normalizeWhitespace(stripHtml(descriptionMatch[1])) : undefined;
     const timeText = timeMatch ? normalizeWhitespace(stripHtml(timeMatch[1])) : undefined;
+    const blockText = normalizeWhitespace(stripHtml(block));
     const url = decodeBakesUrl(sourceUrl);
 
     if (!title || !startDateKey) {
@@ -121,6 +135,7 @@ export function extractBakesPlaceListings(html: string, sourceUrl: string): Bake
       startDateKey,
       timeText,
       description,
+      ticketPriceText: extractTicketPriceText(blockText),
       url,
       imageUrl: extractEventImageUrl(block, url)
     });
@@ -169,6 +184,7 @@ export function parseBakesPlace(html: string, context: ParserContext): ParserRes
       sourceName: context.source.name,
       genreHints: collectGenreHints(listing.title, listing.description),
       description: listing.description,
+      ticketPriceText: listing.ticketPriceText,
       imageUrl: listing.imageUrl,
       imageAlt: listing.imageUrl ? `${listing.title} event image` : undefined,
       confidence: "High",

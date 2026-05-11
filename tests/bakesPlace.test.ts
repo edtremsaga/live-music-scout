@@ -15,7 +15,7 @@ const SAMPLE_HTML = `
         <h3>Friday May 1st</h3>
         <div class="event-info-text">
           <div data-event-id="2772352" data-is-recurring="false"></div>
-          <p>Essential funk from the '60s, '70s, and '80s with powerhouse vocals and saxophone fire.</p>
+          <p>Essential funk from the '60s, '70s, and '80s with powerhouse vocals and saxophone fire. $25 per person music charge. $30 per person food &amp; beverage minimum.</p>
         </div>
         <h3 class="event-time">08:00 PM - 09:30 PM</h3>
         <span class="addtocalendar atc-style-blue">
@@ -44,6 +44,7 @@ test("extractBakesPlaceListings pulls normalized event data from Bake's Place ev
   assert.equal(listings[0].title, "Martin Ross & The Bake's Place All-Stars");
   assert.equal(listings[0].startDateKey, "2026-05-01");
   assert.equal(listings[0].timeText, "08:00 PM - 09:30 PM");
+  assert.equal(listings[0].ticketPriceText, "$25 per person music charge; $30 per person food & beverage minimum");
   assert.equal(
     listings[0].url,
     "https://bakesplacebellevue.com/bellevue-bellevue-bake-s-place-bar-and-bistro-live-music"
@@ -71,4 +72,5 @@ test("parseBakesPlace attaches normalized event image URLs", () => {
     "https://static.spotapps.co/spots/7f/2cd9847e2d4f8d8306b8c602e7a7ef/w926"
   );
   assert.equal(result.events[0].imageAlt, "Martin Ross & The Bake's Place All-Stars event image");
+  assert.equal(result.events[0].ticketPriceText, "$25 per person music charge; $30 per person food & beverage minimum");
 });
