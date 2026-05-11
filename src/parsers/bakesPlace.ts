@@ -51,10 +51,18 @@ function extractVisibleDescription(block: string): string | undefined {
   return match ? normalizeWhitespace(stripHtml(match[2])) : undefined;
 }
 
+function shortenTicketPricePhrase(phrase: string): string {
+  return normalizeWhitespace(phrase)
+    .replace(/^there\s+is\s+(?:also\s+)?(?:a\s+|an\s+)?/i, "")
+    .replace(/\s+added\s+to\s+your\s+bill\b/i, "")
+    .replace(/^(\$\s*\d+(?:\.\d{2})?)\s+per\s+person\s+(food\s*(?:&|and)\s*beverage\s+minimum)\b/i, "$1 $2")
+    .replace(/\bfood\s+and\s+beverage\b/i, "food & beverage");
+}
+
 function extractTicketPriceText(value: string | undefined): string | undefined {
   const pricePhrases = normalizeWhitespace(value ?? "")
     .split(/(?:[.;]|\s+-\s+|\s+\|\s+)/)
-    .map((phrase) => normalizeWhitespace(phrase))
+    .map((phrase) => shortenTicketPricePhrase(phrase))
     .filter((phrase) =>
       /\$\s*\d/i.test(phrase)
       && /\b(ticket|cover|admission|music charge|food\s*&\s*beverage minimum|food and beverage minimum|minimum|charge)\b/i.test(phrase)

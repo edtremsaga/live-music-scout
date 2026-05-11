@@ -52,7 +52,7 @@ test("extractBakesPlaceListings pulls normalized event data from Bake's Place ev
   assert.equal(listings[0].timeText, "08:00 PM - 09:30 PM");
   assert.equal(
     listings[0].ticketPriceText,
-    "There is a $27 music charge per person added to your bill; There is also a $30 per person food & beverage minimum"
+    "$27 music charge per person; $30 food & beverage minimum"
   );
   assert.equal(
     listings[0].url,
@@ -83,7 +83,7 @@ test("parseBakesPlace attaches normalized event image URLs", () => {
   assert.equal(result.events[0].imageAlt, "Martin Ross & The Bake's Place All-Stars event image");
   assert.equal(
     result.events[0].ticketPriceText,
-    "There is a $27 music charge per person added to your bill; There is also a $30 per person food & beverage minimum"
+    "$27 music charge per person; $30 food & beverage minimum"
   );
 });
 
