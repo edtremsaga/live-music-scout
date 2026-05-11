@@ -71,7 +71,37 @@ test("normalizeConorByrneVenuePilotEvent maps public VenuePilot events to scout 
   assert.equal(event.genreHints.includes("live music"), true);
   assert.equal(event.genreHints.includes("Ballard club"), true);
   assert.match(event.description ?? "", /Live at Conor Byrne Pub/);
+  assert.equal(event.ticketPriceText, undefined);
   assert.match(event.basis, /public VenuePilot event widget/);
+});
+
+test("normalizeConorByrneVenuePilotEvent maps status-derived ticket price text", () => {
+  const freeEvent = normalizeConorByrneVenuePilotEvent({
+    name: "Sunday Song Share",
+    date: "2026-05-03",
+    status: "Free"
+  }, CONTEXT);
+  const donationEvent = normalizeConorByrneVenuePilotEvent({
+    name: "Country Dance Night",
+    date: "2026-05-05",
+    status: "Suggested Donation"
+  }, CONTEXT);
+  const ticketsEvent = normalizeConorByrneVenuePilotEvent({
+    name: "Selene Wallace + Kitty O'Hara",
+    date: "2026-05-13",
+    status: "Tickets"
+  }, CONTEXT);
+  const descriptionOnlyEvent = normalizeConorByrneVenuePilotEvent({
+    name: "Fundraiser Matinee",
+    date: "2026-05-17",
+    status: "Tickets",
+    description: "<p>FREE dance lessons before the show and fundraiser copy for local music education.</p>"
+  }, CONTEXT);
+
+  assert.equal(freeEvent?.ticketPriceText, "Free");
+  assert.equal(donationEvent?.ticketPriceText, "Suggested Donation");
+  assert.equal(ticketsEvent?.ticketPriceText, undefined);
+  assert.equal(descriptionOnlyEvent?.ticketPriceText, undefined);
 });
 
 test("isClearlySkippedConorByrneEvent filters obvious lesson-only listings without dropping songwriter nights", () => {

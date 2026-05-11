@@ -102,6 +102,20 @@ function stripVenuePilotDescription(value: string | null | undefined): string | 
   return cleaned || undefined;
 }
 
+function extractStatusTicketText(status: string | null | undefined): string | undefined {
+  const normalized = cleanDisplayText(status ?? "").toLowerCase();
+
+  if (normalized === "free") {
+    return "Free";
+  }
+
+  if (normalized === "suggested donation") {
+    return "Suggested Donation";
+  }
+
+  return undefined;
+}
+
 function collectGenreHints(event: VenuePilotEvent): string[] {
   const hints = new Set<string>(["live music", "concert", "Ballard club", "Conor Byrne Pub"]);
   const blob = `${event.name ?? ""} ${event.support ?? ""} ${event.description ?? ""}`.toLowerCase();
@@ -211,6 +225,7 @@ export function normalizeConorByrneVenuePilotEvent(event: VenuePilotEvent, conte
   }
 
   const description = stripVenuePilotDescription(event.description);
+  const ticketPriceText = extractStatusTicketText(event.status);
   const dedupeKey = `${event.id ?? title}|${date}|${event.startTime ?? event.doorTime ?? ""}|${url}`;
 
   return {
@@ -225,6 +240,7 @@ export function normalizeConorByrneVenuePilotEvent(event: VenuePilotEvent, conte
     sourceName: context.source.name,
     genreHints: collectGenreHints(event),
     description,
+    ticketPriceText,
     confidence: "High",
     basis: normalizeWhitespace([
       "Parsed from Conor Byrne Pub's public VenuePilot event widget",
