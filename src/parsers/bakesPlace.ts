@@ -46,8 +46,13 @@ function extractEventImageUrl(block: string, baseUrl: string): string | undefine
   return normalizePublicImageUrl(src, baseUrl);
 }
 
-function extractTicketPriceText(blockText: string): string | undefined {
-  const pricePhrases = normalizeWhitespace(blockText)
+function extractVisibleDescription(block: string): string | undefined {
+  const match = block.match(/<div\b[^>]*class=(["'])[^"']*\bevent-info-text\b[^"']*\1[^>]*>([\s\S]*?)<\/div>\s*<h3\b[^>]*class=(["'])[^"']*\bevent-time\b[^"']*\3/i);
+  return match ? normalizeWhitespace(stripHtml(match[2])) : undefined;
+}
+
+function extractTicketPriceText(value: string | undefined): string | undefined {
+  const pricePhrases = normalizeWhitespace(value ?? "")
     .split(/(?:[.;]|\s+-\s+|\s+\|\s+)/)
     .map((phrase) => normalizeWhitespace(phrase))
     .filter((phrase) =>
@@ -122,7 +127,7 @@ export function extractBakesPlaceListings(html: string, sourceUrl: string): Bake
     const startDateKey = formatDateKeyFromStart(normalizeWhitespace(startMatch[1]));
     const description = descriptionMatch ? normalizeWhitespace(stripHtml(descriptionMatch[1])) : undefined;
     const timeText = timeMatch ? normalizeWhitespace(stripHtml(timeMatch[1])) : undefined;
-    const blockText = normalizeWhitespace(stripHtml(block));
+    const visibleDescription = extractVisibleDescription(block);
     const url = decodeBakesUrl(sourceUrl);
 
     if (!title || !startDateKey) {
@@ -135,7 +140,7 @@ export function extractBakesPlaceListings(html: string, sourceUrl: string): Bake
       startDateKey,
       timeText,
       description,
-      ticketPriceText: extractTicketPriceText(blockText),
+      ticketPriceText: extractTicketPriceText(visibleDescription ?? description),
       url,
       imageUrl: extractEventImageUrl(block, url)
     });
