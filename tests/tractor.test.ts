@@ -30,7 +30,7 @@ test("parseTractor attaches card-local TicketWeb background images", () => {
       <div class="eventinfo">
         <a href="https://www.ticketweb.com/event/hayden-everett-album-release-w-tractor-tickets/14779873?pl=tractor&amp;REFID=clientsitewp"><span class="artisteventsname">Hayden Everett (Album Release) w/ Junaco, Kazmyn</span></a><br />
         <span class="artisteventstime">May 14 @ 07:30 PM </span><br />
-        <span class="artistseventsprice">$18.90</span><br />
+        <span class="artistseventsprice">$18.90 - $24.04</span><br />
         <span class="artistseventsagelimit">Age Limit: 21+</span><br />
       </div>
     </div>
@@ -42,6 +42,7 @@ test("parseTractor attaches card-local TicketWeb background images", () => {
   assert.equal(result.events[0].title, "An Evening with Souled American (partially seated)");
   assert.equal(result.events[0].date, "2026-05-11");
   assert.equal(result.events[0].time, "08:00 PM");
+  assert.equal(result.events[0].ticketPriceText, "$31.26");
   assert.equal(
     result.events[0].url,
     "https://www.ticketweb.com/event/an-evening-with-souled-american-tractor-tickets/14055874?pl=tractor&REFID=clientsitewp"
@@ -50,6 +51,7 @@ test("parseTractor attaches card-local TicketWeb background images", () => {
   assert.equal(result.events[0].imageAlt, "An Evening with Souled American (partially seated) event image");
 
   assert.equal(result.events[1].title, "Hayden Everett (Album Release) w/ Junaco, Kazmyn");
+  assert.equal(result.events[1].ticketPriceText, "$18.90 - $24.04");
   assert.equal(result.events[1].imageUrl, "https://i.ticketweb.com/i/00/13/38/41/83_Edp.jpg?v=4");
   assert.equal(result.events[1].imageAlt, "Hayden Everett (Album Release) w/ Junaco, Kazmyn event image");
 });

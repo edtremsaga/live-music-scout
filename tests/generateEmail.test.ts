@@ -282,6 +282,61 @@ test("markdown preview uses friendly source markdown link", () => {
   assert.doesNotMatch(output, /Source link: https:\/\/www\.stgpresents\.org\/events\/example/);
 });
 
+test("nightly reports show ticket price text before source when present", () => {
+  const event = makeRankedEvent({
+    sourceName: "Tractor Tavern",
+    venue: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/example",
+    ticketPriceText: "$25.08 - $110.57",
+    score: 20
+  });
+
+  const output = generateEmailPreview(new Date("2026-04-25T19:00:00-07:00"), [event]);
+  assert.match(
+    output,
+    /Tickets: \$25\.08 - \$110\.57\n- Source: \[Tractor\/TicketWeb listing\]\(https:\/\/www\.ticketweb\.com\/event\/example\)/
+  );
+
+  const html = generateEmailHtml(new Date("2026-04-25T19:00:00-07:00"), [event]);
+  assert.match(
+    html,
+    /<li><strong>Tickets:<\/strong> \$25\.08 - \$110\.57<\/li><li><strong>Source:<\/strong> <a href="https:\/\/www\.ticketweb\.com\/event\/example">Tractor\/TicketWeb listing<\/a><\/li>/
+  );
+});
+
+test("weekly reports show ticket price text before source when present", () => {
+  const event = makeRankedEvent({
+    sourceName: "Tractor Tavern",
+    venue: "Tractor Tavern",
+    date: "2026-04-27",
+    url: "https://www.ticketweb.com/event/example",
+    ticketPriceText: "$21.99",
+    score: 20
+  });
+
+  const output = generateWeeklyEmailPreview(
+    new Date("2026-04-25T19:00:00-07:00"),
+    [event],
+    "2026-04-25",
+    "2026-05-02"
+  );
+  assert.match(
+    output,
+    /Tickets: \$21\.99\n- Source: \[Tractor\/TicketWeb listing\]\(https:\/\/www\.ticketweb\.com\/event\/example\)/
+  );
+
+  const html = generateWeeklyEmailHtml(
+    new Date("2026-04-25T19:00:00-07:00"),
+    [event],
+    "2026-04-25",
+    "2026-05-02"
+  );
+  assert.match(
+    html,
+    /<li><strong>Tickets:<\/strong> \$21\.99<\/li><li><strong>Source:<\/strong> <a href="https:\/\/www\.ticketweb\.com\/event\/example">Tractor\/TicketWeb listing<\/a><\/li>/
+  );
+});
+
 test("preview uses highlights and all evaluated sections", () => {
   const event = makeRankedEvent({
     sourceName: "Tractor Tavern",

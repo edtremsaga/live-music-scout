@@ -230,6 +230,11 @@ function formatSourceLinkSlack(event: Pick<RankedEvent, "url" | "sourceName" | "
   return `<${url}|${label}>`;
 }
 
+function getTicketsLine(event: Pick<RankedEvent, "ticketPriceText">): string | undefined {
+  const ticketPriceText = publicText(event.ticketPriceText);
+  return ticketPriceText ? `Tickets: ${ticketPriceText}` : undefined;
+}
+
 function formatVerdict(verdict: RankedEvent["verdict"]): string {
   if (verdict === "Go") {
     return "Go if tickets are available.";
@@ -906,6 +911,7 @@ function renderHighlight(event: RankedEvent, context?: WhyLineContext, section: 
   const timeNote = getTimeOfDayNote(event.time);
   const timeLine = timeNote ? `${event.time ?? "Unknown"} (${timeNote})` : (event.time ?? "Unknown");
   const availability = getAvailabilityLine(event);
+  const ticketsLine = getTicketsLine(event);
   const title = getEventDisplayTitle(event);
   const venue = publicText(event.venue);
   const location = publicText(event.location ?? "Seattle area");
@@ -922,6 +928,10 @@ function renderHighlight(event: RankedEvent, context?: WhyLineContext, section: 
 
   if (availability) {
     lines.splice(4, 0, `- Availability: ${availability}`);
+  }
+
+  if (ticketsLine) {
+    lines.splice(lines.length - 1, 0, `- ${ticketsLine}`);
   }
 
   return lines.join("\n");
@@ -987,6 +997,7 @@ function renderHighlightHtml(event: RankedEvent, context?: WhyLineContext, secti
   const timeNote = getTimeOfDayNote(event.time);
   const timeLine = timeNote ? `${event.time ?? "Unknown"} (${timeNote})` : (event.time ?? "Unknown");
   const availability = getAvailabilityLine(event);
+  const ticketsLine = getTicketsLine(event);
   const title = getEventDisplayTitle(event);
   const venue = publicText(event.venue);
   const location = publicText(event.location ?? "Seattle area");
@@ -1005,6 +1016,10 @@ function renderHighlightHtml(event: RankedEvent, context?: WhyLineContext, secti
 
   if (availability) {
     items.splice(5, 0, `<li><strong>Availability:</strong> ${escapeHtml(availability)}</li>`);
+  }
+
+  if (ticketsLine) {
+    items.splice(items.length - 2, 0, `<li><strong>Tickets:</strong> ${escapeHtml(publicText(event.ticketPriceText))}</li>`);
   }
 
   return wrapHtmlWithThumbnail(items.join(""), event, title);
@@ -1110,6 +1125,7 @@ function renderEvaluatedItem(event: RankedEvent): string {
   const title = getEventDisplayTitle(event);
   const venue = publicText(event.venue);
   const timePart = event.time ? ` — ${event.time}` : "";
+  const ticketsPart = getTicketsLine(event) ? ` — ${getTicketsLine(event)}` : "";
   const reason =
     hasEventStatusIssue(event)
       ? `Not highlighted: ${buildSkipReason(event)}.`
@@ -1119,13 +1135,14 @@ function renderEvaluatedItem(event: RankedEvent): string {
         ? "Not highlighted: good fit, but not one of tonight’s top picks."
         : `Not highlighted: ${buildSkipReason(event)}.`;
 
-  return `- ${title} — ${venue}${timePart} — ${publicText(reason)} ${formatSourceLinkMarkdown(event)}`;
+  return `- ${title} — ${venue}${timePart} — ${publicText(reason)}${ticketsPart} ${formatSourceLinkMarkdown(event)}`;
 }
 
 function renderEvaluatedItemHtml(event: RankedEvent): string {
   const title = getEventDisplayTitle(event);
   const venue = publicText(event.venue);
   const timePart = event.time ? ` — ${event.time}` : "";
+  const ticketsPart = getTicketsLine(event) ? ` — ${getTicketsLine(event)}` : "";
   const reason =
     hasEventStatusIssue(event)
       ? `Not highlighted: ${buildSkipReason(event)}.`
@@ -1135,7 +1152,7 @@ function renderEvaluatedItemHtml(event: RankedEvent): string {
         ? "Not highlighted: good fit, but not one of tonight’s top picks."
         : `Not highlighted: ${buildSkipReason(event)}.`;
 
-  return `<li>${escapeHtml(title)} — ${escapeHtml(venue)}${escapeHtml(timePart)} — ${escapeHtml(publicText(reason))} ${formatSourceLinkHtml(event)}</li>`;
+  return `<li>${escapeHtml(title)} — ${escapeHtml(venue)}${escapeHtml(timePart)} — ${escapeHtml(publicText(reason))}${escapeHtml(ticketsPart)} ${formatSourceLinkHtml(event)}</li>`;
 }
 
 function normalizeWeeklyHighlightTitle(value: string): string {
@@ -1309,6 +1326,7 @@ function renderWeeklyHighlight(
   const dates = Array.from(new Set(group.events.map((event) => event.date))).sort();
   const times = formatWeeklyTimes(group.events);
   const availability = group.events.every((event) => getAvailabilityLine(event) === "Sold out") ? "Sold out" : undefined;
+  const ticketsLine = getTicketsLine(representative);
 
   return [
     `### ${title}`,
@@ -1319,6 +1337,7 @@ function renderWeeklyHighlight(
     availability ? `- Availability: ${availability}` : undefined,
     `- Why it looks good: ${publicText(buildWhyLine(representative, "this week", context))}`,
     `- My take: ${publicText(section === "alsoWorth" ? buildWeeklyAlsoWorthGroupTake(group, context) : buildWeeklyGroupTake(group, context))}`,
+    ticketsLine ? `- ${ticketsLine}` : undefined,
     `- Source: ${formatSourceLinkMarkdown(representative)}`
   ]
     .filter(Boolean)
@@ -1339,6 +1358,7 @@ function renderWeeklyHighlightHtml(
   const dates = Array.from(new Set(group.events.map((event) => event.date))).sort();
   const times = formatWeeklyTimes(group.events);
   const availability = group.events.every((event) => getAvailabilityLine(event) === "Sold out") ? "Sold out" : undefined;
+  const ticketsLine = getTicketsLine(representative);
   const content = [
     `<h3>${escapeHtml(title)}</h3>`,
     "<ul>",
@@ -1349,6 +1369,7 @@ function renderWeeklyHighlightHtml(
     availability ? `<li><strong>Availability:</strong> ${escapeHtml(availability)}</li>` : undefined,
     `<li><strong>Why it looks good:</strong> ${escapeHtml(publicText(buildWhyLine(representative, "this week", context)))}</li>`,
     `<li><strong>My take:</strong> ${escapeHtml(publicText(section === "alsoWorth" ? buildWeeklyAlsoWorthGroupTake(group, context) : buildWeeklyGroupTake(group, context)))}</li>`,
+    ticketsLine ? `<li><strong>Tickets:</strong> ${escapeHtml(publicText(representative.ticketPriceText))}</li>` : undefined,
     `<li><strong>Source:</strong> ${formatSourceLinkHtml(representative)}</li>`,
     "</ul>"
   ]
@@ -1510,8 +1531,9 @@ function renderWeeklyEvaluatedItem(event: RankedEvent, isHighlighted: boolean, i
   const title = getEventDisplayTitle(event);
   const venue = publicText(event.venue);
   const timePart = event.time ? ` — ${event.time}` : "";
+  const ticketsPart = getTicketsLine(event) ? ` — ${getTicketsLine(event)}` : "";
 
-  return `- ${title} — ${venue}${timePart} — ${publicText(reason)} ${formatSourceLinkMarkdown(event)}`;
+  return `- ${title} — ${venue}${timePart} — ${publicText(reason)}${ticketsPart} ${formatSourceLinkMarkdown(event)}`;
 }
 
 function renderWeeklyEvaluatedItemHtml(event: RankedEvent, isHighlighted: boolean, isAlsoWorthALook = false): string {
@@ -1519,8 +1541,9 @@ function renderWeeklyEvaluatedItemHtml(event: RankedEvent, isHighlighted: boolea
   const title = getEventDisplayTitle(event);
   const venue = publicText(event.venue);
   const timePart = event.time ? ` — ${event.time}` : "";
+  const ticketsPart = getTicketsLine(event) ? ` — ${getTicketsLine(event)}` : "";
 
-  return `<li>${escapeHtml(title)} — ${escapeHtml(venue)}${escapeHtml(timePart)} — ${escapeHtml(publicText(reason))} ${formatSourceLinkHtml(event)}</li>`;
+  return `<li>${escapeHtml(title)} — ${escapeHtml(venue)}${escapeHtml(timePart)} — ${escapeHtml(publicText(reason))}${escapeHtml(ticketsPart)} ${formatSourceLinkHtml(event)}</li>`;
 }
 
 function renderWeeklyEvaluatedSections(

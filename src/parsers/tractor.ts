@@ -10,6 +10,7 @@ function makeId(input: string): string {
 
 type TractorCardMetadata = {
   url: string;
+  ticketPriceText?: string;
   imageUrl?: string;
 };
 
@@ -29,6 +30,17 @@ function extractBackgroundImageUrl(value: string, baseUrl: string): string | und
   return normalizePublicImageUrl(match?.[2], baseUrl);
 }
 
+function extractTicketPriceText(card: string): string | undefined {
+  const priceMatch = card.match(/<span\b[^>]*class="[^"]*\bartistseventsprice\b[^"]*"[^>]*>([\s\S]*?)<\/span>/i);
+  const priceText = priceMatch ? htmlToText(priceMatch[1]) : "";
+
+  if (!/^\$\d+(?:\.\d{2})?(?:\s*(?:-|–|to)\s*\$?\d+(?:\.\d{2})?)?$/.test(priceText)) {
+    return undefined;
+  }
+
+  return priceText;
+}
+
 function extractCardMetadataMap(html: string, baseUrl: string): Map<string, TractorCardMetadata> {
   const cards = html.split(/<div\b[^>]*class="[^"]*\bflexmedia\b[^"]*\bflexmedia--artistevents\b[^"]*"[^>]*>/i).slice(1);
   const titleToMetadata = new Map<string, TractorCardMetadata>();
@@ -45,6 +57,7 @@ function extractCardMetadataMap(html: string, baseUrl: string): Map<string, Trac
 
     titleToMetadata.set(title, {
       url,
+      ticketPriceText: extractTicketPriceText(card),
       imageUrl: extractBackgroundImageUrl(linkMatch?.[0] ?? "", baseUrl)
     });
   }
@@ -122,6 +135,7 @@ export function parseTractor(html: string, context: ParserContext): ParserResult
       genreHints: ["roots", "Americana", "rock", "singer-songwriter", "live bands"],
       confidence: "High",
       basis: normalizeWhitespace(basis),
+      ticketPriceText: metadata?.ticketPriceText,
       imageUrl: metadata?.imageUrl,
       imageAlt: metadata?.imageUrl ? `${title} event image` : undefined
     });
