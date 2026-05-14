@@ -224,9 +224,20 @@ function escapeSlackText(value: string): string {
     .replace(/>/g, "&gt;");
 }
 
+function escapeSlackStyledText(value: string): string {
+  return escapeSlackText(value).replace(/[*_`~]/g, "");
+}
+
+function escapeSlackUrl(value: string): string {
+  return value
+    .replace(/\|/g, "%7C")
+    .replace(/</g, "%3C")
+    .replace(/>/g, "%3E");
+}
+
 function formatSourceLinkSlack(event: Pick<RankedEvent, "url" | "sourceName" | "venue">): string {
   const label = escapeSlackText(getSourceLinkLabel(event)).replace(/\|/g, "-");
-  const url = event.url.replace(/>/g, "%3E");
+  const url = escapeSlackUrl(event.url);
   return `<${url}|${label}>`;
 }
 
@@ -388,9 +399,9 @@ function inferEventTags(event: RankedEvent): EventTag[] {
   const titleLower = title.toLowerCase();
   const tags: EventTag[] = [];
 
-  if (/\b(album release|record release|release show)\b/i.test(blob)) tags.push("album_release");
   if (/\bsingle release\b/i.test(blob)) tags.push("single_release");
   if (/\bep release\b/i.test(blob)) tags.push("ep_release");
+  if (/\b(album release|record release)\b/i.test(blob) || (/\brelease show\b/i.test(blob) && !tags.includes("single_release") && !tags.includes("ep_release"))) tags.push("album_release");
   if (/\btribute|plays the music of|songs of\b/i.test(blob)) tags.push("tribute");
   if (/\blegacy|all-?stars|sinatra|dylan|chicago legacy\b/i.test(blob)) tags.push("legacy_act");
   if (/\bbenefit|fundraiser\b/i.test(blob)) tags.push("benefit");
@@ -1596,6 +1607,72 @@ function formatWeeklyDateLabelSlack(dates: string[]): string {
     : dates.map((date) => formatDateKeyShort(date)).join(" / ");
 }
 
+function getSlackVenueName(event: RankedEvent): string {
+  if (event.venue === "Conor Byrne Pub") return "Conor Byrne";
+  if (event.venue === "Dimitriou's Jazz Alley") return "Jazz Alley";
+  if (event.venue === "SeaMonster Lounge") return "SeaMonster";
+  if (event.venue === "Skylark Cafe") return "Skylark";
+  if (event.venue === "Sunset Tavern") return "Sunset";
+  if (event.venue === "Tractor Tavern") return "Tractor";
+  if (event.venue === "The Crocodile" || event.venue === "Madame Lou's") return event.venue;
+  return publicText(event.venue || event.sourceName);
+}
+
+function buildWeeklySlackWhyLine(event: RankedEvent, context?: WhyLineContext): string {
+  const tags = inferEventTags(event);
+  const primaryTag = getPrimaryEventTag(tags);
+  const venueName = getSlackVenueName(event);
+
+  if (primaryTag === "album_release") {
+    if (event.venue === "Conor Byrne Pub") return "Cool album release party at Conor Byrne.";
+    if (event.venue === "Sunset Tavern") return "Cool album release show at Sunset.";
+    return `Cool album release show at ${venueName}.`;
+  }
+
+  if (primaryTag === "ep_release") {
+    return `Cool EP release show at ${venueName}.`;
+  }
+
+  if (primaryTag === "single_release") {
+    const title = publicText(event.artist ?? event.title);
+    const artist = title.split(/\s+\(|\s+w\/|\s+with\s+|\s+\+|,/i)[0]?.trim();
+    return artist && artist.length > 2 && artist.length < 80
+      ? `Good night to catch ${artist} at ${venueName}.`
+      : `Good release-night show at ${venueName}.`;
+  }
+
+  if (primaryTag === "tribute") {
+    const title = publicText(event.artist ?? event.title);
+    const tributeTarget = title.match(/\btribute to\s+([^()+,]+?)(?:\s+featuring|\s+with|\)|$)/i)
+      ?? title.match(/\btribute.*?:\s*([^()+,]+)/i)
+      ?? title.match(/^(.+?)\s+tribute\b/i);
+    const subject = publicText(tributeTarget?.[1]).replace(/\s+night$/i, "");
+    return subject
+      ? `If you like ${subject}, this could be a fun one at ${venueName}.`
+      : `Fun tribute show at ${venueName}.`;
+  }
+
+  if (primaryTag === "legacy_act" || (primaryTag === "seated_show" && event.venue === "Dimitriou's Jazz Alley")) {
+    return "Good choice if you want polished music at Jazz Alley.";
+  }
+
+  if (primaryTag === "multi_band_bill") {
+    return `Multi-band bill at ${venueName}.`;
+  }
+
+  if (primaryTag === "early_show") {
+    return "Nice early-evening option.";
+  }
+
+  if (primaryTag === "late_show") {
+    if (event.venue === "SeaMonster Lounge") return "A solid late-night SeaMonster show.";
+    if (event.venue === "The Crocodile" || event.venue === "Madame Lou's") return "Good late-night Belltown show.";
+    return `Good late-night show at ${venueName}.`;
+  }
+
+  return buildWhyLine(event, "this week", context);
+}
+
 function renderWeeklyHighlightSlack(
   group: WeeklyHighlightGroup,
   context?: WhyLineContext,
@@ -1609,14 +1686,15 @@ function renderWeeklyHighlightSlack(
   const times = formatWeeklyTimes(group.events);
   const dateLine = [formatWeeklyDateLabelSlack(dates), times].filter(Boolean).join(" · ");
   const availability = group.events.every((event) => getAvailabilityLine(event) === "Sold out") ? "Sold out" : undefined;
-  const why = publicText(buildWhyLine(representative, "this week", context));
-  const take = publicText(section === "alsoWorth" ? buildWeeklyAlsoWorthGroupTake(group, context) : buildWeeklyGroupTake(group, context));
+  const ticketsLine = getTicketsLine(representative);
+  const why = publicText(buildWeeklySlackWhyLine(representative, context));
 
   return [
-    `*${escapeSlackText(title)}* — ${escapeSlackText(venue)}`,
+    `*${escapeSlackStyledText(title)}* — ${escapeSlackText(venue)}`,
     dateLine ? escapeSlackText(dateLine) : undefined,
     availability ? `Availability: ${escapeSlackText(availability)}` : undefined,
-    `${escapeSlackText(why)} ${escapeSlackText(take)}`,
+    ticketsLine ? escapeSlackText(ticketsLine) : undefined,
+    escapeSlackText(why),
     `Source: ${formatSourceLinkSlack(representative)}`
   ]
     .filter(Boolean)
@@ -1630,10 +1708,14 @@ function renderWeeklyAlsoWorthSlack(group: WeeklyHighlightGroup): string {
   const venue = publicText(representative.venue);
   const dates = Array.from(new Set(group.events.map((event) => event.date))).sort();
   const times = formatWeeklyTimes(group.events);
+  const ticketsLine = getTicketsLine(representative);
   const details = [venue, formatWeeklyDateLabelSlack(dates), times]
     .filter((value): value is string => Boolean(value))
     .map(escapeSlackText);
-  return `• ${escapeSlackText(title)} — ${details.join(" — ")} — ${formatSourceLinkSlack(representative)}`;
+  if (ticketsLine) {
+    details.push(escapeSlackText(ticketsLine));
+  }
+  return `• ${escapeSlackStyledText(title)} — ${details.join(" — ")} — ${formatSourceLinkSlack(representative)}`;
 }
 
 function renderWeeklyEvaluatedItemSlack(event: RankedEvent, isHighlighted: boolean, isAlsoWorthALook = false): string {
@@ -1646,7 +1728,7 @@ function renderWeeklyEvaluatedItemSlack(event: RankedEvent, isHighlighted: boole
     .join(" — ");
   const headingSuffix = heading ? ` — ${heading}` : "";
   return [
-    `• *${escapeSlackText(title)}*${headingSuffix}`,
+    `• *${escapeSlackStyledText(title)}*${headingSuffix}`,
     `  ${escapeSlackText(reason)}`,
     `  ${formatSourceLinkSlack(event)}`
   ].join("\n");

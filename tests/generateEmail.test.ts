@@ -6,6 +6,7 @@ import {
   generateEmailPreview,
   generateWeeklyEmailHtml,
   generateWeeklyEmailPreview,
+  generateWeeklySlackReport,
   getSourceLinkLabel
 } from "../src/generateEmail.js";
 import type { RankedEvent } from "../src/types.js";
@@ -653,6 +654,114 @@ test("generic weekly why-line uses this-week wording", () => {
 
   assert.match(output, /Why it looks good: Looks like a decent live-music option for this week/);
   assert.doesNotMatch(output, /Why it looks good: Looks like a decent live-music option for tonight/);
+});
+
+test("weekly Slack report keeps source links and styled titles Slack-safe", () => {
+  const event = makeRankedEvent({
+    id: "faux-paws",
+    title: "The Faux Paws w/ Eli West *partially seated*",
+    artist: "The Faux Paws w/ Eli West *partially seated*",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/the-faux-paws-w-eli-tractor-tickets/14796833?pl=tractor&REFID=clientsitewp",
+    date: "2026-05-20",
+    time: "07:30 PM",
+    score: 30,
+    verdict: "Go"
+  });
+
+  const output = generateWeeklySlackReport([event], "2026-05-14", "2026-05-21");
+
+  assert.match(output, /\*The Faux Paws w\/ Eli West partially seated\* — Tractor Tavern/);
+  assert.doesNotMatch(output, /\*The Faux Paws w\/ Eli West \*partially seated\*\*/);
+  assert.match(output, /Source: <https:\/\/www\.ticketweb\.com\/event\/the-faux-paws-w-eli-tractor-tickets\/14796833\?pl=tractor&REFID=clientsitewp\|Tractor\/TicketWeb listing>/);
+  assert.doesNotMatch(output, /%7CTractor\/TicketWeb listing/);
+});
+
+test("weekly Slack highlight blurbs stay short and do not include email take copy", () => {
+  const event = makeRankedEvent({
+    id: "craetorus",
+    title: "Craetorus EP Release Show w/ Shelby Natasha, Bonita Fishwife",
+    artist: "Craetorus EP Release Show w/ Shelby Natasha, Bonita Fishwife",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/craetorus-ep-release-show-w-tractor-tickets/14848243",
+    date: "2026-05-19",
+    time: "07:30 PM",
+    score: 30,
+    verdict: "Go"
+  });
+
+  const output = generateWeeklySlackReport([event], "2026-05-14", "2026-05-21");
+
+  assert.match(output, /Cool EP release show at Tractor\./);
+  assert.doesNotMatch(output, /stronger one-night-only/);
+  assert.doesNotMatch(output, /Worth prioritizing over a generic club night/);
+});
+
+test("weekly Slack report includes ticket text for highlights and also-worth rows", () => {
+  const tractor = makeRankedEvent({
+    id: "tractor-ticket",
+    title: "The Faux Paws w/ Eli West",
+    artist: "The Faux Paws w/ Eli West",
+    venue: "Tractor Tavern",
+    sourceName: "Tractor Tavern",
+    url: "https://www.ticketweb.com/event/faux-paws",
+    date: "2026-05-20",
+    time: "07:30 PM",
+    ticketPriceText: "$25.08",
+    score: 40,
+    verdict: "Go"
+  });
+  const jazzAlley = makeRankedEvent({
+    id: "jazz-ticket",
+    title: "Stanley Clarke",
+    artist: "Stanley Clarke",
+    venue: "Dimitriou's Jazz Alley",
+    sourceName: "Dimitriou's Jazz Alley",
+    url: "https://www.jazzalley.com/www-home/artist.jsp?shownum=8774",
+    date: "2026-05-15",
+    time: "7:30 PM",
+    ticketPriceText: "$48.50",
+    score: 39,
+    verdict: "Go"
+  });
+  const filler = [1, 2, 3, 4].map((index) => makeRankedEvent({
+    id: `filler-${index}`,
+    title: `Filler Show ${index}`,
+    artist: `Filler Show ${index}`,
+    venue: `Filler Venue ${index}`,
+    sourceName: `Filler Source ${index}`,
+    url: `https://example.com/filler-${index}`,
+    date: `2026-05-${15 + index}`,
+    time: "8:00 PM",
+    score: 30 - index,
+    verdict: "Go"
+  }));
+  const bakes = makeRankedEvent({
+    id: "bakes-ticket",
+    title: "Massy Ferguson : Amplified Americana Originals &amp; Covers",
+    artist: "Massy Ferguson : Amplified Americana Originals &amp; Covers",
+    venue: "Bake's Place",
+    sourceName: "Bake's Place",
+    url: "https://bakesplacebellevue.com/bellevue-bellevue-bake-s-place-bar-and-bistro-live-music",
+    date: "2026-05-15",
+    time: "08:00 PM - 09:30 PM",
+    ticketPriceText: "$20 music charge / $25 food minimum",
+    score: 20,
+    verdict: "Go"
+  });
+
+  const output = generateWeeklySlackReport(
+    [tractor, jazzAlley, ...filler, bakes],
+    "2026-05-14",
+    "2026-05-21"
+  );
+
+  assert.match(output, /\*The Faux Paws w\/ Eli West\* — Tractor Tavern[\s\S]*Tickets: \$25\.08[\s\S]*Source: <https:\/\/www\.ticketweb\.com\/event\/faux-paws\|Tractor\/TicketWeb listing>/);
+  assert.match(output, /\*Stanley Clarke\* — Dimitriou's Jazz Alley[\s\S]*Tickets: \$48\.50/);
+  assert.match(output, /• Massy Ferguson : Amplified Americana Originals & Covers — Bake's Place — Fri, May 15 — 08:00 PM - 09:30 PM — Tickets: \$20 music charge \/ \$25 food minimum — <https:\/\/bakesplacebellevue\.com\/bellevue-bellevue-bake-s-place-bar-and-bistro-live-music\|Bake's Place event page>/);
+  assert.doesNotMatch(output, /&amp; Covers/);
 });
 
 test("daily preview separates Go highlights from Maybe also-worth-checking items", () => {
