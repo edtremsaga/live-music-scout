@@ -26,6 +26,7 @@ const SAMPLE_HTML = `
   <section class="promo">New lower prices on drinks & snacks! Cocktails $12.</section>
   <article class="list-style">
     <div class="event-detail" data-event-id="1" data-occurrence-id="101">
+      <img alt="Test Artist Trio" src="//images.zoogletools.com/s:bzglfiles/u/444652/test-artist/original/test-artist.jpg/!!/meta%3AeyJzcmNCdWNrZXQiOiJiemdsZmlsZXMifQ%3D%3D.jpg" />
       <div class="event-description">
         <div class="event-info-wrapper">
           <h2 class="event-info event-title heading-tertiary"><a href="https://thetripledoor.net/event/1/101/test-artist">Test Artist Trio</a></h2>
@@ -88,7 +89,12 @@ test("extractTripleDoorListings pulls canonical event page data from upcoming li
   assert.equal(listings[0].time, "7:30 PM");
   assert.equal(listings[0].location, "Mainstage Theatre, 216 Union Street, Seattle");
   assert.equal(listings[0].ticketPriceText, "$32 - $59");
+  assert.equal(
+    listings[0].imageUrl,
+    "https://images.zoogletools.com/s:bzglfiles/u/444652/test-artist/original/test-artist.jpg/!!/meta%3AeyJzcmNCdWNrZXQiOiJiemdsZmlsZXMifQ%3D%3D.jpg"
+  );
   assert.equal(listings[2].ticketPriceText, undefined);
+  assert.equal(listings[2].imageUrl, undefined);
 });
 
 test("parseTripleDoor carries source-visible event-block ticket price text to scout events", async () => {
@@ -97,6 +103,12 @@ test("parseTripleDoor carries source-visible event-block ticket price text to sc
   assert.equal(result.events.length, 2);
   assert.equal(result.events[0].title, "Test Artist Trio");
   assert.equal(result.events[0].ticketPriceText, "$32 - $59");
+  assert.equal(
+    result.events[0].imageUrl,
+    "https://images.zoogletools.com/s:bzglfiles/u/444652/test-artist/original/test-artist.jpg/!!/meta%3AeyJzcmNCdWNrZXQiOiJiemdsZmlsZXMifQ%3D%3D.jpg"
+  );
+  assert.equal(result.events[0].imageAlt, "Test Artist Trio event image");
   assert.equal(result.events[1].title, "No Price Band");
   assert.equal(result.events[1].ticketPriceText, undefined);
+  assert.equal(result.events[1].imageUrl, undefined);
 });

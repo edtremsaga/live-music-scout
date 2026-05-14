@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 import { extractTime, normalizeWhitespace, parseMonthDayText, stripHtml } from "../dateUtils.js";
 import { fetchPage } from "../fetchPage.js";
+import { normalizePublicImageUrl } from "../imageUtils.js";
 import type { LiveMusicEvent, ParserContext, ParserResult } from "../types.js";
 
 const TRIPLE_DOOR_BASE_URL = "https://thetripledoor.net";
@@ -17,6 +18,7 @@ type TripleDoorListing = {
   location: string;
   description?: string;
   ticketPriceText?: string;
+  imageUrl?: string;
 };
 
 function makeId(input: string): string {
@@ -121,6 +123,15 @@ function extractTicketPriceText(block: string): string | undefined {
   return match ? normalizeWhitespace(match[1].replace("–", "-")) : undefined;
 }
 
+function extractImageUrl(block: string): string | undefined {
+  const imageMatch = block.match(/<img\b[^>]*(?:src|data-src)=["']([^"']+)["'][^>]*>/i);
+  if (!imageMatch) {
+    return undefined;
+  }
+
+  return normalizePublicImageUrl(imageMatch[1], TRIPLE_DOOR_BASE_URL);
+}
+
 export function extractTripleDoorListings(html: string): TripleDoorListing[] {
   const blocks = html.matchAll(/<div class="event-detail"[\s\S]*?<\/article>/gi);
   const listings: TripleDoorListing[] = [];
@@ -144,6 +155,7 @@ export function extractTripleDoorListings(html: string): TripleDoorListing[] {
     const time = dateMatch[2] ? extractTime(normalizeWhitespace(stripHtml(dateMatch[2]))) : undefined;
     const description = descriptionMatch ? normalizeWhitespace(stripHtml(descriptionMatch[1])) : undefined;
     const ticketPriceText = extractTicketPriceText(block);
+    const imageUrl = extractImageUrl(block);
 
     if (!title || !dateText || !location) {
       continue;
@@ -156,7 +168,8 @@ export function extractTripleDoorListings(html: string): TripleDoorListing[] {
       time,
       location,
       description,
-      ticketPriceText
+      ticketPriceText,
+      imageUrl
     });
   }
 
@@ -236,6 +249,8 @@ export async function parseTripleDoor(html: string, context: ParserContext): Pro
         genreHints: collectGenreHints(listing.title, listing.description),
         description: listing.description,
         ticketPriceText: listing.ticketPriceText,
+        imageUrl: listing.imageUrl,
+        imageAlt: listing.imageUrl ? `${listing.title} event image` : undefined,
         confidence: "High",
         basis: normalizeWhitespace([
           "Parsed from The Triple Door mainstage upcoming listings",
