@@ -1699,13 +1699,13 @@ function renderWeeklyAlsoWorthSlack(group: WeeklyHighlightGroup): string {
   const dates = Array.from(new Set(group.events.map((event) => event.date))).sort();
   const times = formatWeeklyTimes(group.events);
   const ticketsLine = getTicketsLine(representative);
-  const details = [venue, formatWeeklyDateLabelSlack(dates), times]
+  const details = [formatWeeklyDateLabelSlack(dates), times, ticketsLine]
     .filter((value): value is string => Boolean(value))
-    .map(escapeSlackText);
+    .map(escapeSlackText)
+    .join(" · ");
   return [
-    `• ${escapeSlackStyledText(title)} — ${details.join(" — ")}`,
-    ticketsLine ? `  ${escapeSlackText(ticketsLine)}` : undefined,
-    `  Source: ${formatSourceLabelSlack(representative)}`
+    `• ${escapeSlackStyledText(title)} — ${escapeSlackText(venue)}`,
+    details ? `  ${details}` : undefined
   ]
     .filter(Boolean)
     .join("\n");
@@ -1749,8 +1749,8 @@ export function generateWeeklySlackReport(
 
   if (alsoWorthALook.length > 0) {
     sections.push("");
-    sections.push("Also Worth a Look");
-    sections.push(alsoWorthALook.map(renderWeeklyAlsoWorthSlack).join("\n"));
+    sections.push("*Also Worth a Look*");
+    sections.push(alsoWorthALook.map(renderWeeklyAlsoWorthSlack).join("\n\n"));
   }
 
   if (includeEvaluatedShows) {

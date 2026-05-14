@@ -753,16 +753,32 @@ test("weekly Slack report includes ticket text for highlights and also-worth row
     score: 20,
     verdict: "Go"
   });
+  const seaMonster = makeRankedEvent({
+    id: "sea-no-ticket",
+    title: "Extra Thick",
+    artist: "Extra Thick",
+    venue: "SeaMonster Lounge",
+    sourceName: "SeaMonster Lounge",
+    url: "https://example.com/extra-thick",
+    date: "2026-05-16",
+    time: "8:00 PM",
+    score: 19,
+    verdict: "Go"
+  });
 
   const output = generateWeeklySlackReport(
-    [tractor, jazzAlley, ...filler, bakes],
+    [tractor, jazzAlley, ...filler, bakes, seaMonster],
     "2026-05-14",
     "2026-05-21"
   );
 
   assert.match(output, /The Faux Paws w\/ Eli West — Tractor Tavern[\s\S]*Tickets: \$25\.08[\s\S]*Source: Tractor\/TicketWeb listing/);
   assert.match(output, /Stanley Clarke — Dimitriou's Jazz Alley[\s\S]*Tickets: \$48\.50/);
-  assert.match(output, /• Massy Ferguson : Amplified Americana Originals & Covers — Bake's Place — Fri, May 15 — 08:00 PM - 09:30 PM\n  Tickets: \$20 music charge \/ \$25 food minimum\n  Source: Bake's Place event page/);
+  assert.match(output, /\*Also Worth a Look\*/);
+  assert.match(output, /• Massy Ferguson : Amplified Americana Originals & Covers — Bake's Place\n  Fri, May 15 · 08:00 PM - 09:30 PM · Tickets: \$20 music charge \/ \$25 food minimum\n\n• Extra Thick — SeaMonster Lounge\n  Sat, May 16 · 8:00 PM/);
+  assert.doesNotMatch(output, /Massy Ferguson[\s\S]*Source: Bake's Place event page/);
+  assert.doesNotMatch(output, /Extra Thick[\s\S]*Tickets:/);
+  assert.doesNotMatch(output, /Extra Thick[\s\S]*Source:/);
   assert.doesNotMatch(output, /&amp; Covers/);
   assert.doesNotMatch(output, /https?:\/\//);
 });
