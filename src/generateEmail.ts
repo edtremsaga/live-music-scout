@@ -219,26 +219,16 @@ function formatSourceLinkHtml(event: Pick<RankedEvent, "url" | "sourceName" | "v
 }
 
 function escapeSlackText(value: string): string {
-  return publicText(value)
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  return publicText(value);
 }
 
 function escapeSlackStyledText(value: string): string {
   return escapeSlackText(value).replace(/[*_`~]/g, "");
 }
 
-function escapeSlackUrl(value: string): string {
-  return value
-    .replace(/\|/g, "%7C")
-    .replace(/</g, "%3C")
-    .replace(/>/g, "%3E");
-}
-
-function formatSourceLinkSlack(event: Pick<RankedEvent, "url" | "sourceName" | "venue">): string {
+function formatSourceLabelSlack(event: Pick<RankedEvent, "url" | "sourceName" | "venue">): string {
   const label = escapeSlackText(getSourceLinkLabel(event)).replace(/\|/g, "-");
-  const url = escapeSlackUrl(event.url);
-  return `<${url}|${label}>`;
+  return label;
 }
 
 function getTicketsLine(event: Pick<RankedEvent, "ticketPriceText">): string | undefined {
@@ -1690,12 +1680,13 @@ function renderWeeklyHighlightSlack(
   const why = publicText(buildWeeklySlackWhyLine(representative, context));
 
   return [
-    `*${escapeSlackStyledText(title)}* — ${escapeSlackText(venue)}`,
+    `${escapeSlackStyledText(title)} — ${escapeSlackText(venue)}`,
     dateLine ? escapeSlackText(dateLine) : undefined,
     availability ? `Availability: ${escapeSlackText(availability)}` : undefined,
     ticketsLine ? escapeSlackText(ticketsLine) : undefined,
     escapeSlackText(why),
-    `Source: ${formatSourceLinkSlack(representative)}`
+    `Source: ${formatSourceLabelSlack(representative)}`,
+    representative.url
   ]
     .filter(Boolean)
     .join("\n");
@@ -1712,10 +1703,14 @@ function renderWeeklyAlsoWorthSlack(group: WeeklyHighlightGroup): string {
   const details = [venue, formatWeeklyDateLabelSlack(dates), times]
     .filter((value): value is string => Boolean(value))
     .map(escapeSlackText);
-  if (ticketsLine) {
-    details.push(escapeSlackText(ticketsLine));
-  }
-  return `• ${escapeSlackStyledText(title)} — ${details.join(" — ")} — ${formatSourceLinkSlack(representative)}`;
+  return [
+    `• ${escapeSlackStyledText(title)} — ${details.join(" — ")}`,
+    ticketsLine ? `  ${escapeSlackText(ticketsLine)}` : undefined,
+    `  Source: ${formatSourceLabelSlack(representative)}`,
+    `  ${representative.url}`
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 function renderWeeklyEvaluatedItemSlack(event: RankedEvent, isHighlighted: boolean, isAlsoWorthALook = false): string {
@@ -1728,9 +1723,9 @@ function renderWeeklyEvaluatedItemSlack(event: RankedEvent, isHighlighted: boole
     .join(" — ");
   const headingSuffix = heading ? ` — ${heading}` : "";
   return [
-    `• *${escapeSlackStyledText(title)}*${headingSuffix}`,
+    `• ${escapeSlackStyledText(title)}${headingSuffix}`,
     `  ${escapeSlackText(reason)}`,
-    `  ${formatSourceLinkSlack(event)}`
+    `  ${formatSourceLabelSlack(event)}: ${event.url}`
   ].join("\n");
 }
 
@@ -1744,10 +1739,10 @@ export function generateWeeklySlackReport(
   const includeEvaluatedShows = options.includeEvaluatedShows ?? false;
   const highlightsWhyContext = createWhyLineContext();
   const sections: string[] = [
-    "*Live Music Scout — This Week around Seattle/Bellevue*",
-    `_${escapeSlackText(formatSlackDateRange(startKey, endKey))}_`,
+    "Live Music Scout — This Week around Seattle/Bellevue",
+    escapeSlackText(formatSlackDateRange(startKey, endKey)),
     "",
-    "*This Week’s Highlights*",
+    "This Week’s Highlights",
     "",
     highlights.length > 0
       ? highlights.map((group) => renderWeeklyHighlightSlack(group, highlightsWhyContext, "highlight")).join("\n\n")
@@ -1756,27 +1751,27 @@ export function generateWeeklySlackReport(
 
   if (alsoWorthALook.length > 0) {
     sections.push("");
-    sections.push("*Also Worth a Look*");
+    sections.push("Also Worth a Look");
     sections.push(alsoWorthALook.map(renderWeeklyAlsoWorthSlack).join("\n"));
   }
 
   if (includeEvaluatedShows) {
     sections.push("");
-    sections.push("*Evaluated Shows by Day*");
+    sections.push("Evaluated Shows by Day");
 
     if (evaluatedByDay.size === 0) {
       sections.push("No other evaluated shows in this window.");
     } else {
       for (const [dateKey, events] of Array.from(evaluatedByDay.entries()).sort(([a], [b]) => a.localeCompare(b))) {
         sections.push("");
-        sections.push(`*${escapeSlackText(formatDateKeyWeekday(dateKey))}*`);
+        sections.push(escapeSlackText(formatDateKeyWeekday(dateKey)));
         sections.push(events.map((event) => renderWeeklyEvaluatedItemSlack(event, highlightIds.has(event.id), alsoWorthALookIds.has(event.id))).join("\n"));
       }
     }
   }
 
   sections.push("");
-  sections.push("_Evaluated from configured venue sources; not a complete citywide calendar._");
+  sections.push("Evaluated from configured venue sources; not a complete citywide calendar.");
 
   return sections.join("\n");
 }

@@ -656,7 +656,7 @@ test("generic weekly why-line uses this-week wording", () => {
   assert.doesNotMatch(output, /Why it looks good: Looks like a decent live-music option for tonight/);
 });
 
-test("weekly Slack report keeps source links and styled titles Slack-safe", () => {
+test("weekly Slack report is paste-friendly and keeps styled titles clean", () => {
   const event = makeRankedEvent({
     id: "faux-paws",
     title: "The Faux Paws w/ Eli West *partially seated*",
@@ -672,10 +672,11 @@ test("weekly Slack report keeps source links and styled titles Slack-safe", () =
 
   const output = generateWeeklySlackReport([event], "2026-05-14", "2026-05-21");
 
-  assert.match(output, /\*The Faux Paws w\/ Eli West partially seated\* — Tractor Tavern/);
+  assert.match(output, /The Faux Paws w\/ Eli West partially seated — Tractor Tavern/);
   assert.doesNotMatch(output, /\*The Faux Paws w\/ Eli West \*partially seated\*\*/);
-  assert.match(output, /Source: <https:\/\/www\.ticketweb\.com\/event\/the-faux-paws-w-eli-tractor-tickets\/14796833\?pl=tractor&REFID=clientsitewp\|Tractor\/TicketWeb listing>/);
+  assert.doesNotMatch(output, /<https:\/\/www\.ticketweb\.com/);
   assert.doesNotMatch(output, /%7CTractor\/TicketWeb listing/);
+  assert.match(output, /Source: Tractor\/TicketWeb listing\nhttps:\/\/www\.ticketweb\.com\/event\/the-faux-paws-w-eli-tractor-tickets\/14796833\?pl=tractor&REFID=clientsitewp/);
 });
 
 test("weekly Slack highlight blurbs stay short and do not include email take copy", () => {
@@ -758,9 +759,9 @@ test("weekly Slack report includes ticket text for highlights and also-worth row
     "2026-05-21"
   );
 
-  assert.match(output, /\*The Faux Paws w\/ Eli West\* — Tractor Tavern[\s\S]*Tickets: \$25\.08[\s\S]*Source: <https:\/\/www\.ticketweb\.com\/event\/faux-paws\|Tractor\/TicketWeb listing>/);
-  assert.match(output, /\*Stanley Clarke\* — Dimitriou's Jazz Alley[\s\S]*Tickets: \$48\.50/);
-  assert.match(output, /• Massy Ferguson : Amplified Americana Originals & Covers — Bake's Place — Fri, May 15 — 08:00 PM - 09:30 PM — Tickets: \$20 music charge \/ \$25 food minimum — <https:\/\/bakesplacebellevue\.com\/bellevue-bellevue-bake-s-place-bar-and-bistro-live-music\|Bake's Place event page>/);
+  assert.match(output, /The Faux Paws w\/ Eli West — Tractor Tavern[\s\S]*Tickets: \$25\.08[\s\S]*Source: Tractor\/TicketWeb listing\nhttps:\/\/www\.ticketweb\.com\/event\/faux-paws/);
+  assert.match(output, /Stanley Clarke — Dimitriou's Jazz Alley[\s\S]*Tickets: \$48\.50/);
+  assert.match(output, /• Massy Ferguson : Amplified Americana Originals & Covers — Bake's Place — Fri, May 15 — 08:00 PM - 09:30 PM\n  Tickets: \$20 music charge \/ \$25 food minimum\n  Source: Bake's Place event page\n  https:\/\/bakesplacebellevue\.com\/bellevue-bellevue-bake-s-place-bar-and-bistro-live-music/);
   assert.doesNotMatch(output, /&amp; Covers/);
 });
 
