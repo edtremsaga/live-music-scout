@@ -1685,8 +1685,7 @@ function renderWeeklyHighlightSlack(
     availability ? `Availability: ${escapeSlackText(availability)}` : undefined,
     ticketsLine ? escapeSlackText(ticketsLine) : undefined,
     escapeSlackText(why),
-    `Source: ${formatSourceLabelSlack(representative)}`,
-    representative.url
+    `Source: ${formatSourceLabelSlack(representative)}`
   ]
     .filter(Boolean)
     .join("\n");
@@ -1706,8 +1705,7 @@ function renderWeeklyAlsoWorthSlack(group: WeeklyHighlightGroup): string {
   return [
     `• ${escapeSlackStyledText(title)} — ${details.join(" — ")}`,
     ticketsLine ? `  ${escapeSlackText(ticketsLine)}` : undefined,
-    `  Source: ${formatSourceLabelSlack(representative)}`,
-    `  ${representative.url}`
+    `  Source: ${formatSourceLabelSlack(representative)}`
   ]
     .filter(Boolean)
     .join("\n");
@@ -1725,7 +1723,7 @@ function renderWeeklyEvaluatedItemSlack(event: RankedEvent, isHighlighted: boole
   return [
     `• ${escapeSlackStyledText(title)}${headingSuffix}`,
     `  ${escapeSlackText(reason)}`,
-    `  ${formatSourceLabelSlack(event)}: ${event.url}`
+    `  Source: ${formatSourceLabelSlack(event)}`
   ].join("\n");
 }
 
